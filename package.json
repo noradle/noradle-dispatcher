@@ -1,0 +1,30 @@
+{
+  "name": "noradle-dispatcher",
+  "version": "0.13.0",
+  "description": "communication hub for noradle, dispatch frame between client, oracle, console",
+  "main": "dispatcher.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:noradle/noradle-dispatcher.git"
+  },
+  "keywords": [
+    "noradle",
+    "dispatcher",
+    "hub"
+  ],
+  "dependencies": {
+    "debug": "~2.1.1",
+    "dnode": "^1.2.1",
+    "underscore": "^1.8.3",
+    "noradle-protocol": "^0.13.0"
+  },
+  "author": "kaven276@vip.sina.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/noradle/noradle-dispatcher/issues"
+  },
+  "homepage": "https://github.com/noradle/noradle-dispatcher"
+}
