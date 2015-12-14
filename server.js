@@ -3,7 +3,7 @@
 var program = require('commander');
 console.log(process.argv);
 program
-  .version('0.13.1')
+  .version(require('./package.json').version)
   .option('-p, --listen_port [port]', 'listening port', 1522)
   .option('-c, --client_config [file]', 'client control configuration file path')
   .option('-k, --keep_alive_interval [seconds]', 'keep_alive_interval', 280)
