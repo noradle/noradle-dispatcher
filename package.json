@@ -17,6 +17,7 @@
     "dispatcher",
     "hub"
   ],
+  "engines": {"node": ">=0.10"},
   "dependencies": {
     "commander": "^2.9.0",
     "debug": "~2.1.1",
@@ -27,7 +28,8 @@
   "author": "kaven276@vip.sina.com",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/noradle/noradle-dispatcher/issues"
+    "url": "https://github.com/noradle/noradle-dispatcher/issues",
+    "email": "kaven276@vip.sina.com"
   },
   "homepage": "https://github.com/noradle/noradle-dispatcher"
 }
