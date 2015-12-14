@@ -1,6 +1,6 @@
 {
   "name": "noradle-dispatcher",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "communication hub for noradle, dispatch frame between client, oracle, console",
   "main": "dispatcher.js",
   "scripts": {
@@ -17,7 +17,9 @@
     "dispatcher",
     "hub"
   ],
-  "engines": {"node": ">=0.10"},
+  "engines": {
+    "node": ">=0.10"
+  },
   "dependencies": {
     "commander": "^2.9.0",
     "debug": "~2.1.1",
