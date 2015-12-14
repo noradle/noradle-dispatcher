@@ -525,6 +525,7 @@ function serveMonitor(c){
 
 var startCfg;
 exports.start = function(cfg){
+  console.log(cfg);
   startCfg = cfg;
   if (cfg.client_config) {
     client_cfgs = require(cfg.client_config);
@@ -544,25 +545,6 @@ exports.start = function(cfg){
     .listenAll(cfg.listen_port)
     .setKeepAlive(cfg.keep_alive_interval)
   ;
-};
-
-exports.start_by_env = function(){
-  var env = process.env
-    , args = process.argv
-    ;
-  exports.start({
-    listen_port : args[2] || env.listen_port || 1522,
-    client_config : args[3] || env.client_config,
-    keep_alive_interval : env.keep_alive_interval || 280,
-    db : {
-      name : env.db_name,
-      domain : env.db_domain,
-      unique : env.db_unique_name,
-      inst : parseInt(env.instance),
-      role : env.db_role,
-      cfg_id : env.db_cfg_id
-    }
-  });
 };
 
 // graceful quit support
@@ -617,6 +599,3 @@ process.on('SIGUSER2', function reloadConfig(){
   // reload configuration
 });
 
-if (process.argv[1].match(/.*\/noradle-dispatcher$/) || process.argv[1] === __filename) {
-  exports.start_by_env();
-}
