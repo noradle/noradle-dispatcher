@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 var program = require('commander');
-console.log(process.argv);
+
 program
   .version(require('./package.json').version)
   .option('-p, --listen_port [port]', 'listening port', 1522)
