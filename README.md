@@ -129,3 +129,37 @@ through runtime statistics is collected by dispatcher, client driver, OSP,
 dispatcher can get all statistics from all types of node,
 so a monitor/console app can just connect to dispatcher to get all statistics,
 very convenient, no network setup/configuration overhead.
+
+install / deploy / run
+========================
+
+install
+
+`npm install -g noradle-dispatcher`
+
+run
+
+`noradle-dispatcher -h` to see command line options
+
+```
+  Usage: noradle-dispatcher [options]
+
+  Options:
+
+    -h, --help                           output usage information
+    -V, --version                        output the version number
+    -p, --listen_port [port]             listening port
+    -c, --client_config [file]           client control configuration file path
+    -k, --keep_alive_interval [seconds]  keep_alive_interval
+    --db_name [value]                    db_name filter
+    --db_domain [value]                  db_domain filter
+    --db_unique_name [value]             db_unique_name filter
+    --db_instance [value]                db_instance filter
+    --db_role [value]                    db_role filter
+    --db_cfg_id [value]                  db_cfg_id filter
+```
+
+* listen_port is the network listening port, must provided.
+* client_config is for client authentication and control, it'll be moved to oracle config tables in the future,
+  but at this time, it must be provided.
+    
