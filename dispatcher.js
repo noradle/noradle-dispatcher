@@ -200,7 +200,7 @@ function serveClient(c){
 
     cStats.inBytes += (8 + len);
     if (type === C.HEAD_FRAME) {
-      var cidBuf = new Buffer(client.cid + '\r\n' + cSlotID + '\r\n');
+      var exBuf = new Buffer(client.cid + '\r\n' + cSlotID + '\r\n');
       cStats.reqCount++;
       req = client.cSlots[cSlotID] = {rcvTime : Date.now()};
       // for the first frame of a request
@@ -210,12 +210,12 @@ function serveClient(c){
         oSock = oraSessions[oSlotID].socket;
         oSock.write(head);
         oSock.write(body);
-        oSock.write(cidBuf);
+        oSock.write(exBuf);
         req.sendTime = Date.now();
         debug('head frame use slot(%d)', oSlotID);
       } else {
         // init buf, add to queue
-        req.buf = [head, body, cidBuf];
+        req.buf = [head, body, exBuf];
         queue.push([cSeq, cSlotID]);
         debug('head frame no free slot');
       }
