@@ -529,6 +529,9 @@ exports.start = function(cfg){
   startCfg = cfg;
   if (cfg.client_config) {
     client_cfgs = require(cfg.client_config);
+    if (client_cfgs.client_config) {
+      client_cfgs = client_cfgs.client_config;
+    }
   } else {
     client_cfgs = {
       demo : {
