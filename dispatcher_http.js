@@ -75,25 +75,6 @@ function Client(c, cSeq, cid){
   this.cfg = cfg;
 }
 
-// todo : secure client authenticate
-// may support dynamic client auth with database
-// or use dynamic cfg file that can be updated at runtime
-// then can be CHAP code later to protect password transfer
-// dispatcher give a random code
-// client send md5(passwd+random) back to dispatcher to test
-
-function authenticate(bufAuth){
-  var auth = JSON.parse(bufAuth.toString());
-  debug(auth);
-  var cfg = client_cfgs[auth.cid];
-  if (cfg && cfg.passwd === auth.passwd) {
-    debug('client cid/passwd pass %j', cfg);
-    return auth.cid;
-  }
-  debug('client cid/passwd error');
-  return false;
-}
-
 function bindOSlot(req, cSeq, cSlotID, cTime, oSlotID){
   req.oSlotID = oSlotID;
   var oraSlot = oraSessions[oSlotID];
@@ -138,7 +119,7 @@ function findMinFreeCSeq(){
 }
 
 // may accept from different front nodejs connection request
-function serveClient(c){
+function serveClient(c, cid){
   var cSeq, client, cStats, authenticated = false;
 
   debug('node(new) connected');
@@ -160,14 +141,7 @@ function serveClient(c){
 
 
   return function processClientFrame(head, cSlotID, type, flag, len, body){
-    var cid;
     if (!authenticated) {
-      if (!(cid = authenticate(body))) {
-        //todo: may tell what's wrong to client
-        c.end();
-        return;
-      }
-
       authenticated = true;
       cSeq = findMinFreeCSeq();
       client = clients[cSeq] = new Client(c, cSeq, cid);
