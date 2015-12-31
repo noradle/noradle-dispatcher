@@ -120,9 +120,14 @@ function findMinFreeCSeq(){
 
 // may accept from different front nodejs connection request
 function serveClient(c, cid){
-  var cSeq, client, cStats, authenticated = false;
+  var cSeq = findMinFreeCSeq()
+    , client = clients[cSeq] = new Client(c, cSeq, cid)
+    , cStats = client.cfg.stats
+    ;
 
-  debug('node(new) connected');
+  debug('node(%d) connected', cSeq);
+  frame.writeFrame(c, 0, C.SET_CONCURRENCY, 0, JSON.stringify(client.cur_concurrency));
+  debug('write set_concurrency to %d', client.cur_concurrency);
 
   c.on('end', function(){
     c.end();
@@ -141,17 +146,6 @@ function serveClient(c, cid){
 
 
   return function processClientFrame(head, cSlotID, type, flag, len, body){
-    if (!authenticated) {
-      authenticated = true;
-      cSeq = findMinFreeCSeq();
-      client = clients[cSeq] = new Client(c, cSeq, cid);
-      cStats = client.cfg.stats;
-      debug('node(%d) connected', cSeq);
-      frame.writeFrame(c, 0, C.SET_CONCURRENCY, 0, JSON.stringify(client.cur_concurrency));
-      debug('write set_concurrency to %d', client.cur_concurrency);
-      return;
-    }
-
     if (cSlotID === 0) {
       req = JSON.parse(body);
       switch (type) {
