@@ -59,7 +59,6 @@ var net = require('net')
   , oraSessionsHW = 0
   , freeOraSlotIDs = []
   , gConnSeq = 0
-  , monitors = []
   , oSlotCnt = 0
   , concurrencyHW = 0
   ;
@@ -102,8 +101,8 @@ exports.server4all = net.createServer({allowHalfOpen : true}, function(c){
         c.on('frame', serveOracle(c));
         return true;
       case C.MONITOR:
-        c.removeAllListeners('readable');
-        serveMonitor(c);
+        //c.removeAllListeners('readable');
+        //serveMonitor(c);
         return true;
       default:
         return false;
@@ -444,7 +443,7 @@ exports.setKeepAlive = function(KAI){
   }, keepAliveInterval * 1000);
 };
 
-var monServices = {
+exports.monServices = {
   getStartConfig : function(cb){
     cb(startCfg);
   },
@@ -478,18 +477,6 @@ var monServices = {
     cb(clients2);
   }
 };
-
-function serveMonitor(c){
-  c.pipe(dnode(monServices)).pipe(c);
-  monitors.push(c);
-  c.on('end', function(){
-    c.end();
-  });
-  c.on('close', function(){
-    monitors.splice(monitors.indexOf(c), 1);
-  });
-}
-
 
 var startCfg;
 exports.start = function(cfg){
@@ -548,11 +535,6 @@ process.on('SIGTERM', function gracefulQuit(){
       }
     }
   }
-
-  // todo: close all monitor connections directly
-  monitors.forEach(function(c){
-    c.end();
-  });
 
   setInterval(function(){
     exports.server4all.getConnections(function(err, count){
