@@ -96,7 +96,7 @@ exports.server4all = net.createServer({allowHalfOpen : true}, function(c){
   function mmChecker(mm){
     switch (mm) {
       case C.CLIENT:
-        c.on('frame', serveClient(c));
+        //c.on('frame', serveClient(c));
         return true;
       case C.ORACLE:
         c.on('frame', serveOracle(c));
@@ -145,7 +145,7 @@ function serveClient(c, cid){
   });
 
 
-  return function processClientFrame(head, cSlotID, type, flag, len, body){
+  frame.parseFrameStream(c, function processClientFrame(head, cSlotID, type, flag, len, body){
     if (cSlotID === 0) {
       req = JSON.parse(body);
       switch (type) {
@@ -204,7 +204,7 @@ function serveClient(c, cid){
       }
     }
 
-  }
+  });
 }
 
 function Session(oSlotID, body, socket){
