@@ -46,7 +46,6 @@ function Stats(){
 
 var net = require('net')
   , fs = require('fs')
-  , dnode = require('dnode')
   , frame = require('noradle-protocol').frame
   , _ = require('underscore')
   , debug = require('debug')('noradle:dispatcher')
