@@ -45,7 +45,9 @@ function Stats(){
 }
 
 var net = require('net')
+  , http = require('http')
   , fs = require('fs')
+  , dispatcher = require('./noradle-dispatcher-core.js')
   , frame = require('noradle-protocol').frame
   , _ = require('underscore')
   , debug = require('debug')('noradle:dispatcher')
@@ -411,9 +413,12 @@ function serveOracle(c){
 }
 
 exports.listenAll = function(port){
-  exports.server4all.listen(port, function(){
-    debug('listening to client/oracle at port:%d ', port);
-  });
+  exports.server4all = http.createServer()
+    .on('request', dispatcher.serveConsole)
+    .on('upgrade', dispatcher.serveClientOracle)
+    .listen(port, function(){
+      dlog('dispatcher is listening at %d for http', port);
+    });
   return exports;
 };
 
