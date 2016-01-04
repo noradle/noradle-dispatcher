@@ -11,7 +11,7 @@ function serveConsole(req, res){
   dlog('client normal request arrived, it must be from noradle-console');
   dlog('req.url=%s', req.url);
   dlog('req.headers=%j', req.headers);
-  var role = req.headers['noradle-role']
+  var role = req.headers['x-noradle-role']
     , tmp = auth(req)
     , name = tmp.name
     , pass = tmp.pass
@@ -68,7 +68,7 @@ function serveClientOracle(req, cltSocket, head){
     return true;
   }
 
-  var role = req.headers['noradle-role']
+  var role = req.headers['x-noradle-role']
     , namepass = auth(req)
     , name = namepass.name
     , pass = namepass.pass
