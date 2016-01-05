@@ -53,7 +53,6 @@ var net = require('net')
   , debug = require('debug')('noradle:dispatcher')
   , C = require('noradle-protocol').constant
   , queue = []
-  , client_cfgs
   , clients = new Array(C.MAX_CLIENTS)
   , clientsHW = 0
   , oraSessions = new Array(C.ORA_MAX_SLOTS)
@@ -63,6 +62,10 @@ var net = require('net')
   , oSlotCnt = 0
   , concurrencyHW = 0
   ;
+
+_.each(client_cfgs, function(v, n){
+  v.stats = new Stats();
+});
 
 function Client(c, cSeq, cid){
   this.cTime = Date.now();
@@ -413,15 +416,13 @@ exports.listenAll = function(port){
  * If firewall suddenly restart, dispatcher/OPS can both detect lost connection
  */
 
-var keepAliveInterval;
-exports.setKeepAlive = function(KAI){
-  keepAliveInterval = KAI;
+(function setKeepAlive(){
   setInterval(function(){
     freeOraSlotIDs.forEach(function(oSlotID){
       signalOracleKeepAlive(oraSessions[oSlotID].socket);
     });
   }, keepAliveInterval * 1000);
-};
+})();
 
 var monServices = {
   getStartConfig : function(cb){
@@ -476,33 +477,6 @@ exports.serveConsole = function(req, res){
     });
     res.end(body);
   });
-};
-
-var startCfg;
-exports.start = function(cfg){
-  console.log(cfg);
-  startCfg = cfg;
-  if (cfg.client_config) {
-    client_cfgs = require(cfg.client_config);
-    if (client_cfgs.client_config) {
-      client_cfgs = client_cfgs.client_config;
-    }
-  } else {
-    client_cfgs = {
-      demo : {
-        min_concurrency : 3,
-        max_concurrency : 3,
-        passwd : 'demo'
-      }
-    };
-  }
-  _.each(client_cfgs, function(v, n){
-    v.stats = new Stats();
-  });
-  exports
-    .listenAll(cfg.listen_port)
-    .setKeepAlive(cfg.keep_alive_interval)
-  ;
 };
 
 // graceful quit support

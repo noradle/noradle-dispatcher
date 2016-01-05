@@ -16,7 +16,7 @@ program
   .parse(process.argv)
 ;
 
-require('./dispatcher.js').start({
+global.startCfg = {
   listen_port : program.listen_port,
   client_config : program.client_config,
   keep_alive_interval : program.keep_alive_interval,
@@ -28,4 +28,27 @@ require('./dispatcher.js').start({
     role : program.db_role,
     cfg_id : program.db_cfg_id
   }
-});
+};
+
+(function initConfig(cfg){
+  console.log(cfg);
+  if (cfg.client_config) {
+    client_cfgs = require(cfg.client_config);
+    if (client_cfgs.client_config) {
+      client_cfgs = client_cfgs.client_config;
+    }
+  } else {
+    client_cfgs = {
+      demo : {
+        min_concurrency : 3,
+        max_concurrency : 3,
+        passwd : 'demo'
+      }
+    };
+  }
+  global.client_cfgs = client_cfgs;
+  global.keepAliveInterval = cfg.keep_alive_interval;
+
+})(startCfg);
+
+require('./noradle-dispatcher-core.js');
