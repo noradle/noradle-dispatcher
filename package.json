@@ -21,6 +21,7 @@
     "node": ">=0.10"
   },
   "dependencies": {
+    "basic-auth": "^1.0.3",
     "commander": "^2.9.0",
     "debug": "~2.1.1",
     "underscore": "^1.8.3",

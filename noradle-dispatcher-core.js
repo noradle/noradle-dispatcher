@@ -12,7 +12,7 @@ function serveConsole(req, res){
   dlog('req.url=%s', req.url);
   dlog('req.headers=%j', req.headers);
   var role = req.headers['x-noradle-role']
-    , tmp = auth(req)
+    , tmp = auth(req) || {name : '', pass : ''}
     , name = tmp.name
     , pass = tmp.pass
     , ip = req.socket.remoteAddress
@@ -69,7 +69,7 @@ function serveClientOracle(req, cltSocket, head){
   }
 
   var role = req.headers['x-noradle-role']
-    , namepass = auth(req)
+    , namepass = auth(req) || {name : '', pass : ''}
     , name = namepass.name
     , pass = namepass.pass
     , ip = cltSocket.remoteAddress
