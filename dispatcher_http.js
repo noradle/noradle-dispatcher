@@ -89,28 +89,6 @@ function unBindOSlot(oSlot){
   delete oSlot.cTime;
 }
 
-exports.server4all = net.createServer({allowHalfOpen : true}, function(c){
-
-  frame.wrapFrameStream(c, C.DISPATCHER, mmChecker);
-
-  function mmChecker(mm){
-    switch (mm) {
-      case C.CLIENT:
-        //c.on('frame', serveClient(c));
-        return true;
-      case C.ORACLE:
-        //c.on('frame', serveOracle(c));
-        return true;
-      case C.MONITOR:
-        //c.removeAllListeners('readable');
-        //serveMonitor(c);
-        return true;
-      default:
-        return false;
-    }
-  }
-});
-
 function findMinFreeCSeq(){
   for (var i = 1; i < clientsHW; i++) {
     if (!clients[i]) return i;
@@ -119,7 +97,7 @@ function findMinFreeCSeq(){
 }
 
 // may accept from different front nodejs connection request
-function serveClient(c, cid){
+exports.serveClient = function serveClient(c, cid){
   var cSeq = findMinFreeCSeq()
     , client = clients[cSeq] = new Client(c, cSeq, cid)
     , cStats = client.cfg.stats
@@ -205,7 +183,7 @@ function serveClient(c, cid){
     }
 
   });
-}
+};
 
 function Session(headers, socket){
 
@@ -304,7 +282,7 @@ function signalOracleKeepAlive(c){
 }
 
 // for oracle reverse connection
-function serveOracle(c, headers){
+exports.serveOracle = function serveOracle(c, headers){
   var oraSession = new Session(headers, c)
     , oSlotID = oraSession.slotID
     , connSeq = ++gConnSeq
@@ -408,7 +386,7 @@ function serveOracle(c, headers){
       }
     }
   });
-}
+};
 
 exports.listenAll = function(port){
   exports.server4all = http.createServer()
