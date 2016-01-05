@@ -458,7 +458,7 @@ var monServices = {
   }
 };
 
-exports.serviceConsole = function(req, res){
+exports.serveConsole = function(req, res){
   // it's just a rest service, route by url.path
   var serviceName = req.url.substr(1)
     , service = monServices[serviceName]
