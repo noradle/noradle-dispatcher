@@ -6,7 +6,7 @@ program
   .version(require('./package.json').version)
   .option('-p, --listen_port [port]', 'listening port', 1522)
   .option('-c, --client_config [file]', 'client control configuration file path')
-  .option('-k, --keep_alive_interval [seconds]', 'keep_alive_interval', 280)
+  .option('-k, --keep_alive_interval [seconds]', 'keep_alive_interval', parseInt)
   .option('--db_name [value]', 'db_name filter')
   .option('--db_domain [value]', 'db_domain filter')
   .option('--db_unique_name [value]', 'db_unique_name filter')
@@ -19,7 +19,7 @@ program
 global.startCfg = {
   listen_port : program.listen_port,
   client_config : program.client_config,
-  keep_alive_interval : program.keep_alive_interval,
+  keep_alive_interval : program.keep_alive_interval || 280,
   db : {
     name : program.db_name,
     domain : program.db_domain,
