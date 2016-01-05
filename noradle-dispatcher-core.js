@@ -3,8 +3,6 @@ var dlog = require('debug')('noradle:dispatcher')
   , fs = require('fs')
   , frame = require('noradle-protocol').frame
   , main = require('./dispatcher_http.js')
-  , monServices = main.monServices
-  , serviceNames = Object.keys(monServices)
   ;
 
 function serveConsole(req, res){
@@ -34,26 +32,7 @@ function serveConsole(req, res){
     return;
   }
   dlog('user:pass:ip check passed');
-  if (true) {
-    // it's just a rest service, route by url.path
-    var serverName = req.url.substr(1)
-      , serviceIndex = serviceNames.indexOf(serverName)
-      ;
-    if (serviceIndex < 0) {
-      res.writeHead(404, {'Content-Type' : 'text/plain'});
-      res.write('no such service ' + serverName);
-      res.end();
-      return;
-    }
-    monServices[serviceName](function(data){
-      var body = JSON.stringify(data);
-      res.writeHead(200, {
-        'Content-Type' : 'application/json',
-        'Content-Length' : (new Buffer(body)).length
-      });
-      res.end(body);
-    });
-  }
+  main.serveConsole(req, res);
 }
 
 function serveClientOracle(req, cltSocket, head){

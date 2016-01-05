@@ -445,7 +445,7 @@ exports.setKeepAlive = function(KAI){
   }, keepAliveInterval * 1000);
 };
 
-exports.monServices = {
+var monServices = {
   getStartConfig : function(cb){
     cb(startCfg);
   },
@@ -478,6 +478,26 @@ exports.monServices = {
     }
     cb(clients2);
   }
+};
+
+exports.serviceConsole = function(req, res){
+  // it's just a rest service, route by url.path
+  var serviceName = req.url.substr(1)
+    , service = monServices[serviceName]
+    ;
+  if (!service) {
+    res.writeHead(404, {'Content-Type' : 'text/plain'});
+    res.end('no such service ' + serviceName);
+    return;
+  }
+  service(function(data){
+    var body = JSON.stringify(data);
+    res.writeHead(200, {
+      'Content-Type' : 'application/json',
+      'Content-Length' : (new Buffer(body)).length
+    });
+    res.end(body);
+  });
 };
 
 var startCfg;
