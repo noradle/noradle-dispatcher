@@ -1,4 +1,5 @@
 var dlog = require('debug')('noradle:dispatcher')
+  , http = require('http')
   , auth = require('basic-auth')
   , fs = require('fs')
   , frame = require('noradle-protocol').frame
@@ -102,8 +103,6 @@ function serveClientOracle(req, cltSocket, head){
   }
 }
 
-exports.serveConsole = serveConsole;
-exports.serveClientOracle = serveClientOracle;
 
 function fakeTCPServer(cltSocket){
   cltSocket.setEncoding('utf8');
@@ -161,3 +160,17 @@ function checkByConfig(configPath){
     return true;
   }
 }
+
+(function start(port){
+  var server4all = http.createServer()
+      .on('request', serveConsole)
+      .on('upgrade', serveClientOracle)
+      .on('connection', function(){
+        console.log('new connection to dispatcher');
+      })
+    ;
+  server4all.allowHalfOpen = true;
+  server4all.listen(port, function(){
+    dlog('dispatcher is listening at %d for http', port);
+  });
+})(startCfg.listen_port);
