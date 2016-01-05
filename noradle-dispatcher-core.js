@@ -115,6 +115,7 @@ function serveClientOracle(req, cltSocket, head){
       break;
     case 'oracle':
       // register in dbPools
+      main.serveOracle(cltSocket, req.headers);
       break;
     default:
       // fake service for every on.data data

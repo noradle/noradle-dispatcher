@@ -99,7 +99,7 @@ exports.server4all = net.createServer({allowHalfOpen : true}, function(c){
         //c.on('frame', serveClient(c));
         return true;
       case C.ORACLE:
-        c.on('frame', serveOracle(c));
+        //c.on('frame', serveOracle(c));
         return true;
       case C.MONITOR:
         //c.removeAllListeners('readable');
@@ -207,26 +207,26 @@ function serveClient(c, cid){
   });
 }
 
-function Session(oSlotID, body, socket){
+function Session(headers, socket){
 
   oSlotCnt++;
 
   var session = {
-    sid : body.readInt32BE(4),
-    serial : body.readInt32BE(8),
-    spid : body.readInt32BE(12),
-    age : body.readInt32BE(16),
-    reqs : body.readInt32BE(20)
+    sid : parseInt(headers['x-sid']),
+    serial : parseInt(headers['x-serial']),
+    spid : parseInt(headers['x-spid']),
+    age : parseInt(headers['x-age']),
+    reqs : parseInt(headers['x-reqs']),
   };
 
-  var dbNames = body.slice(24).toString().split('/');
   var db = {
-    name : dbNames[0],
-    domain : dbNames[1],
-    unique : dbNames[2],
-    role : dbNames[3],
-    inst : body.readInt32BE(0),
-    cfg_id : dbNames[4]
+    name : headers['x-db_name'],
+    domain : headers['x-db_domain'],
+    unique : headers['x-db_unique_name'],
+    con_name : headers['x-con_name'],
+    role : headers['x-database_role'],
+    inst : parseInt(headers['x-instance']),
+    cfg_id : headers['x-cfg_id']
   };
 
   for (var n in db) {
@@ -240,8 +240,7 @@ function Session(oSlotID, body, socket){
   }
 
   // fixed properties
-  this.slotID = oSlotID;
-  this.head = body;
+  this.slotID = parseInt(headers['x-oslot_id']);
   this.session = session;
   this.db = db;
   this.socket = socket;
@@ -251,11 +250,10 @@ function Session(oSlotID, body, socket){
   this.cSlotID = null;
   this.quitting = false;
 
-  if (oSlotID > oraSessionsHW) {
-    oraSessionsHW = oSlotID;
+  if (this.slotID > oraSessionsHW) {
+    oraSessionsHW = this.slotID;
   }
 }
-
 
 function afterNewAvailableOSlot(oSlotID, isNew){
   debug('queue length=%d', queue.length);
@@ -306,8 +304,22 @@ function signalOracleKeepAlive(c){
 }
 
 // for oracle reverse connection
-function serveOracle(c){
-  var oSlotID, connSeq = ++gConnSeq, registered = false;
+function serveOracle(c, headers){
+  var oraSession = new Session(headers, c)
+    , oSlotID = oraSession.slotID
+    , connSeq = ++gConnSeq
+    ;
+  if (!oraSession) {
+    setTimeout(function(){
+      signalOracleQuit(c);
+    }, keepAliveInterval * 1000);
+    return;
+  }
+  oraSessions[oSlotID] = oraSession;
+  signalOracleKeepAlive(c);
+  debug('oracle seq(%s) oSlot(%s) slot add, freeListCount=%d', connSeq, oSlotID, freeOraSlotIDs.length);
+  afterNewAvailableOSlot(oSlotID, true);
+
   debug('oracle seq(%d) connected', connSeq);
 
   c.on('end', function(){
@@ -343,23 +355,9 @@ function serveOracle(c){
     // todo: may release resource
   });
 
-  return function processOracleFrame(head, cSlotID, type, flag, len, body){
+  frame.parseFrameStream(c, function processOracleFrame(head, cSlotID, type, flag, len, body){
 
-    if (!registered) {
-      registered = true;
-      oSlotID = cSlotID;
-      var oraSession = new Session(oSlotID, body, c);
-      if (!oraSession) {
-        setTimeout(function(){
-          signalOracleQuit(c);
-        }, keepAliveInterval * 1000);
-        return;
-      }
-      oraSessions[oSlotID] = oraSession;
-      signalOracleKeepAlive(c);
-      debug('oracle seq(%s) oSlot(%s) slot add, freeListCount=%d', connSeq, oSlotID, freeOraSlotIDs.length);
-      afterNewAvailableOSlot(oSlotID, true);
-    } else if (cSlotID === 0) {
+    if (cSlotID === 0) {
       // control frame from oracle
       if (type === C.RO_QUIT) {
         // oracle want to quit, if oSlot is free then quit, otherwise make oSlot is quitting, quit when release
@@ -409,7 +407,7 @@ function serveOracle(c){
         }
       }
     }
-  };
+  });
 }
 
 exports.listenAll = function(port){
