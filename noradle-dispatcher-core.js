@@ -1,4 +1,4 @@
-var dlog = require('debug')('dispatcher')
+var dlog = require('debug')('noradle:dispatcher')
   , auth = require('basic-auth')
   , fs = require('fs')
   , frame = require('noradle-protocol').frame
