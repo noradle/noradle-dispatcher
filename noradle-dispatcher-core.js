@@ -83,10 +83,15 @@ function serveClientOracle(req, cltSocket, head){
     return;
   }
 
-  cltSocket.write('HTTP/1.1 101 Switching Protocols\r\n' +
-    'Connection: Upgrade\r\n' +
-    'Upgrade: websocket\r\n' +
-    '\r\n');
+  var response = [
+    'HTTP/1.1 101 Switching Protocols',
+    'Connection: Upgrade',
+    'Upgrade: websocket',
+    '',
+    ''
+  ].join('\r\n');
+
+  cltSocket.write(response);
   dlog('%s connected', role);
 
   /**
