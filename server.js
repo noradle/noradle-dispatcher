@@ -51,9 +51,6 @@ global.startCfg = {
 
 })(startCfg);
 
-var server4all = require('./noradle-dispatcher-core.js');
-server4all.allowHalfOpen = true;
-// server4all.setTimeout(5 * 1000);
-server4all.listen(startCfg.listen_port, function(){
+require('./noradle-dispatcher-core.js').listen(startCfg.listen_port, function(){
   console.log('dispatcher is listening at %d for http', startCfg.listen_port);
 });
