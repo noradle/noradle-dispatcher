@@ -103,6 +103,13 @@ function serveClientOracle(req, cltSocket, head){
   }
 }
 
+module.exports = http.createServer()
+  .on('request', serveConsole)
+  .on('upgrade', serveClientOracle)
+  .on('connection', function(){
+    console.log('new connection to dispatcher');
+  })
+;
 
 function fakeTCPServer(cltSocket){
   cltSocket.setEncoding('utf8');
@@ -161,16 +168,3 @@ function checkByConfig(configPath){
   }
 }
 
-(function start(port){
-  var server4all = http.createServer()
-      .on('request', serveConsole)
-      .on('upgrade', serveClientOracle)
-      .on('connection', function(){
-        console.log('new connection to dispatcher');
-      })
-    ;
-  server4all.allowHalfOpen = true;
-  server4all.listen(port, function(){
-    dlog('dispatcher is listening at %d for http', port);
-  });
-})(startCfg.listen_port);
