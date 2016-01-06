@@ -10,7 +10,7 @@ program
   .option('--db_name [value]', 'db_name filter')
   .option('--db_domain [value]', 'db_domain filter')
   .option('--db_unique_name [value]', 'db_unique_name filter')
-  .option('--db_instance [value]', 'db_instance filter')
+  .option('--db_instance [value]', 'db_instance filter', parseInt)
   .option('--db_role [value]', 'db_role filter')
   .option('--db_cfg_id [value]', 'db_cfg_id filter')
   .parse(process.argv)
@@ -24,7 +24,7 @@ global.startCfg = {
     name : program.db_name,
     domain : program.db_domain,
     unique : program.db_unique_name,
-    inst : parseInt(program.db_instance),
+    inst : program.db_instance,
     role : program.db_role,
     cfg_id : program.db_cfg_id
   }
