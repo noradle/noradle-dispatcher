@@ -48,7 +48,6 @@ var net = require('net')
   , fs = require('fs')
   , frame = require('noradle-protocol').frame
   , _ = require('underscore')
-  , debug = require('debug')('noradle:dispatcher')
   , C = require('noradle-protocol').constant
   , queue = []
   , clients = new Array(C.MAX_CLIENTS)
@@ -59,6 +58,12 @@ var net = require('net')
   , gConnSeq = 0
   , oSlotCnt = 0
   , concurrencyHW = 0
+  ;
+
+var debug = require('debug')
+  , logLifeCycle = debug('dispatcher:lifecycle')
+  , logDispatch = debug('dispatcher:dispatch')
+  , logGrace = debug('dispatcher:grace')
   ;
 
 _.each(client_cfgs, function(v, n){
@@ -104,13 +109,13 @@ exports.serveClient = function serveClient(c, cid){
     , cStats = client.cfg.stats
     ;
 
-  debug('node(%d) connected', cSeq);
+  logLifeCycle('node(%d) connected', cSeq);
   frame.writeFrame(c, 0, C.SET_CONCURRENCY, 0, JSON.stringify(client.cur_concurrency));
-  debug('write set_concurrency to %d', client.cur_concurrency);
+  logLifeCycle('write set_concurrency to %d', client.cur_concurrency);
 
   c.on('end', function(){
     c.end();
-    debug('node(%d) disconnected', cSeq);
+    logLifeCycle('node(%d) disconnected', cSeq);
   });
 
   c.on('error', function(err){
@@ -119,12 +124,13 @@ exports.serveClient = function serveClient(c, cid){
   });
 
   c.on('close', function(has_error){
-    debug('client(%d) close', cSeq);
+    logLifeCycle('client(%d) close', cSeq);
     delete clients[cSeq];
   });
 
 
   frame.parseFrameStream(c, function processClientFrame(head, cSlotID, type, flag, len, body){
+    logDispatch('C2O: cSlotID=%d type=%d len=%d', cSlotID, type, len);
     if (cSlotID === 0) {
       req = JSON.parse(body);
       switch (type) {
@@ -159,12 +165,12 @@ exports.serveClient = function serveClient(c, cid){
         oSock.write(body);
         oSock.write(exBuf);
         req.sendTime = Date.now();
-        debug('head frame use slot(%d)', oSlotID);
+        logDispatch('C2O: (%d,%d) head frame find oSlotID', cSlotID, oSlotID);
       } else {
         // init buf, add to queue
         req.buf = [head, body, exBuf];
         queue.push([cSeq, cSlotID]);
-        debug('head frame no free slot');
+        logDispatch('C2O: (%d,_) head frame no free slot, push to queue', cSlotID);
       }
 
     } else {
@@ -172,17 +178,16 @@ exports.serveClient = function serveClient(c, cid){
       // for the successive frames of a request
       oSlotID = req.oSlotID;
       if (oSlotID) {
+        logDispatch('C2O: (%d,%d) successive frame use bound oSlodID(%d)', cSlotID, oSlotID);
         oSock = oraSessions[oSlotID].socket;
         oSock.write(head);
         body && oSock.write(body);
-        debug('successive frame use bound slot(%d)', oSlotID);
       } else {
+        logDispatch('C2O: cSlodID(%d,_) successive frame add to buf(chunks=%d)', cSlotID, req.buf.length);
         req.buf.push(head);
         body && req.buf.push(body);
-        debug('successive frame add to buf, wait oslot, chunks=%d', req.buf.length);
       }
     }
-
   });
 };
 
@@ -212,9 +217,9 @@ function Session(headers, socket){
   for (var n in db) {
     if (startCfg.db[n] && startCfg.db[n] !== db[n]) {
       // todo: add warning
-      debug('db[%s] not match %s(config) != %s(incoming)', n, startCfg.db[n], db[n]);
-      debug(db);
-      debug(startCfg.db);
+      logLifeCycle('db[%s] not match %s(config) != %s(incoming)', n, startCfg.db[n], db[n]);
+      logLifeCycle(db);
+      logLifeCycle(startCfg.db);
       return false;
     }
   }
@@ -236,7 +241,7 @@ function Session(headers, socket){
 }
 
 function afterNewAvailableOSlot(oSlotID, isNew){
-  debug('queue length=%d', queue.length);
+  logDispatch('BUF: (%d) oSlot free (%s), queue length=%d', oSlotID, isNew ? 'newly' : 'recycled', queue.length);
   var w = queue.shift();
   if (w) {
     // tell pmon queue length
@@ -250,12 +255,12 @@ function afterNewAvailableOSlot(oSlotID, isNew){
       , req = client.cSlots[cSlotID]
       , buf = req.buf
       ;
-    debug('unshift queue item cseq=%d, cSlotID=%d, req(chunks)=%d', cSeq, cSlotID, req.buf.length);
+    logDispatch('unshift queue item cseq=%d, cSlotID=%d, req(chunks)=%d', cSeq, cSlotID, req.buf.length);
     oraSessions[oSlotID].socket.write(Buffer.concat(buf));
     delete req.buf;
     bindOSlot(req, cSeq, cSlotID, client.cTime, oSlotID);
     req.sendTime = Date.now();
-    debug('switch %j to use oSlot(%d)', w, oSlotID);
+    logDispatch('switch %j to use oSlot(%d)', w, oSlotID);
   } else {
     concurrencyHW = oSlotCnt;
     if (isNew) {
@@ -297,20 +302,18 @@ exports.serveOracle = function serveOracle(c, headers){
   }
   oraSessions[oSlotID] = oraSession;
   signalOracleKeepAlive(c);
-  debug('oracle seq(%s) oSlot(%s) slot add, freeListCount=%d', connSeq, oSlotID, freeOraSlotIDs.length);
+  logLifeCycle('oracle seq(%s) oSlot(%s) slot add, freeListCount=%d', connSeq, oSlotID, freeOraSlotIDs.length);
   afterNewAvailableOSlot(oSlotID, true);
-
-  debug('oracle seq(%d) connected', connSeq);
 
   c.on('end', function(){
     c.end();
-    debug('oracle seq(%s) oSlot(%s) disconnected', connSeq, oSlotID);
+    logLifeCycle('oracle seq(%s) oSlot(%s) disconnected', connSeq, oSlotID);
     // find free list and remove from free list
     var pos = freeOraSlotIDs.indexOf(oSlotID);
     if (pos >= 0) {
       // if in free list, just remove from free list
       freeOraSlotIDs.splice(pos, 1);
-      debug('oracle seq(%s) oSlot(%s) slot removed, freeListCount=%d', connSeq, oSlotID, freeOraSlotIDs.length);
+      logLifeCycle('oracle seq(%s) oSlot(%s) slot removed, freeListCount=%d', connSeq, oSlotID, freeOraSlotIDs.length);
     } else {
       // if in busy serving a client request, raise a error for the req
       var oSlot = oraSessions[oSlotID]
@@ -318,7 +321,7 @@ exports.serveOracle = function serveOracle(c, headers){
         , client = clients[oSlot.cSeq || 0]
         ;
       if (client && oSlot.cTime === client.cTime) {
-        debug('busy oSlot(%s) slot socket end, cSeq(%s,%d), cSlotid(%d)', oSlotID, client.cid, oSlot.cSeq, cSlotID);
+        logLifeCycle('busy oSlot(%s) slot socket end, cSeq(%s,%d), cSlotid(%d)', oSlotID, client.cid, oSlot.cSeq, cSlotID);
         frame.writeFrame(client.socket, cSlotID, C.ERROR_FRAME, 0, 'oracle connection break!');
         frame.writeFrame(client.socket, cSlotID, C.END_FRAME, 0);
         delete client.cSlots[cSlotID];
@@ -329,7 +332,7 @@ exports.serveOracle = function serveOracle(c, headers){
   });
 
   c.on('error', function(err){
-    console.error('oracle socket error', err, oSlotID);
+    logLifeCycle('oracle[%d] socket error: %s', oSlotID, err);
     delete oraSessions[oSlotID];
     oSlotCnt--;
     // todo: may release resource
@@ -350,7 +353,7 @@ exports.serveOracle = function serveOracle(c, headers){
       }
     } else {
       // redirect frame to the right client socket untouched
-      debug('from oracle: cSlotID=%d, cseq=%d, type=%d', cSlotID, oraSessions[oSlotID].cSeq, type);
+      logDispatch('O2C: (%d,%d), cseq=%d, type=%d', cSlotID, oSlotID, oraSessions[oSlotID].cSeq, type);
       var oraSession = oraSessions[oSlotID]
         , client = clients[oraSession.cSeq]
         ;
@@ -378,7 +381,7 @@ exports.serveOracle = function serveOracle(c, headers){
       }
       if (type === C.END_FRAME) {
         // reclaim oraSock for other use
-        debug('oSlot is freed');
+        logDispatch('O2C: (%d,%d) oSlot is freed', cSlotID, oSlotID);
         unBindOSlot(oraSession);
         if (oraSession.quitting) {
           signalOracleQuit(c);
@@ -472,11 +475,11 @@ exports.serveConsole = function(req, res){
 // stop listen and wait all pending request to finish
 // after 1 minute, force quit any way
 process.on('SIGTERM', function gracefulQuit(){
-  debug('SIGTERM received, new connection/request is not allowed, when all request is done, process will quit safely');
+  logGrace('SIGTERM received, new connection/request is not allowed, when all request is done, process will quit safely');
 
   // no more client/oracle/monitor can connect to me
   exports.server4all.close(function(){
-    debug('all client/oracle/monitor connections is closed, safe to quit');
+    logGrace('all client/oracle/monitor connections is closed, safe to quit');
     process.exit(0);
   });
 
@@ -501,7 +504,7 @@ process.on('SIGTERM', function gracefulQuit(){
 
   setInterval(function(){
     exports.server4all.getConnections(function(err, count){
-      debug('remain %d connections on server', count);
+      logGrace('remain %d connections on server', count);
     });
   }, 1000);
 
