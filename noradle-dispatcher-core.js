@@ -81,19 +81,6 @@ function serveClientOracle(req, cltSocket, head){
   cltSocket.write(response);
   dlog('%s connected', role);
 
-  /**
-   * 1. parse
-   * parse tunnel socket data as frames
-   *
-   * 2. send
-   * bind to one dbPool
-   * when there is free connection is dbPool
-   * send request there
-   *
-   * 3. recevie response
-   *
-   * 4. relay response to client
-   */
   // established socket/tunnel have no timeout setting, live forever, check cltSocket._idleTimeout
   cltSocket.setTimeout(0);
 
