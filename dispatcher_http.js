@@ -189,6 +189,7 @@ exports.serveClient = function serveClient(c, cid){
 function Session(headers, socket){
 
   oSlotCnt++;
+  this.headers = headers;
 
   var session = {
     sid : parseInt(headers['x-sid']),
