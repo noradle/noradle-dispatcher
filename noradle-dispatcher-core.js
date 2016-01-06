@@ -94,6 +94,9 @@ function serveClientOracle(req, cltSocket, head){
    *
    * 4. relay response to client
    */
+  // established socket/tunnel have no timeout setting, live forever, check cltSocket._idleTimeout
+  cltSocket.setTimeout(0);
+
   switch (role) {
     case 'client':
       // process frame
