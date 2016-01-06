@@ -33,7 +33,10 @@ function serveConsole(req, res){
   dlog('console(auth,id,pass,ip)=(%j,%s,%s,%s)', tmp, name, pass, ip);
   // todo: check console name:pass:ip for every request, no state here
   if (demoCheck('console', name, pass, ip)) {
-    res.writeHead(401, {'Content-Type' : 'text/plain'});
+    res.writeHead(401, {
+      'WWW-authenticate' : 'Basic realm="DISPATCHER"',
+      'Content-Type' : 'text/plain'
+    });
     res.write('you are not allowed');
     res.end();
     dlog('user:pass:ip check failed');
@@ -133,10 +136,18 @@ function check(role, user, pass, cip){
   return true;
 }
 
+/**
+ *
+ * @param role
+ * @param name
+ * @param pass
+ * @param cip
+ * @returns {String|Boolean} String for error info, true for fail with no reason, false for ok
+ */
 function demoCheck(role, name, pass, cip){
   switch (role) {
     case 'console':
-      return false;
+      return !(name === 'admin' && pass === 'noradle');
       break;
     case 'client':
       if (name === 'demo' && pass !== 'demo') {
