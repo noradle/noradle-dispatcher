@@ -51,6 +51,4 @@ global.startCfg = {
 
 })(startCfg);
 
-require('./handshake.js').listen(startCfg.listen_port, function(){
-  console.log('dispatcher is listening at %d for http', startCfg.listen_port);
-});
+require('./handshake.js');

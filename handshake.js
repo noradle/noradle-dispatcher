@@ -104,13 +104,15 @@ function serveClientOracle(req, cltSocket, head){
   }
 }
 
-module.exports = http.createServer()
+http.createServer()
   .on('request', serveConsole)
   .on('upgrade', serveClientOracle)
   .on('connection', function(){
     console.log('new connection to dispatcher');
-  })
-;
+  }).listen(startCfg.listen_port, function(){
+    console.log('dispatcher is listening at %d for http', startCfg.listen_port);
+  });
+
 
 function fakeTCPServer(cltSocket){
   cltSocket.setEncoding('utf8');
