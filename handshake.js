@@ -3,7 +3,7 @@ var debug = require('debug')
   , auth = require('basic-auth')
   , fs = require('fs')
   , frame = require('noradle-protocol').frame
-  , main = require('./dispatcher_http.js')
+  , main = require('./dispatch.js')
   , logRequest = debug('dispatcher:onRequest')
   , logUpgrade = debug('dispatcher:onUpgrade')
   ;
