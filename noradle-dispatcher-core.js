@@ -66,7 +66,8 @@ function serveClientOracle(req, cltSocket, head){
     , ip = cltSocket.remoteAddress
     ;
 
-  logUpgrade('role=%s, user=%s, pass=%s, cip=%s', role, name, pass, ip);
+  if (false && demoCheck(role, name, pass, ip)) {
+    logUpgrade('role=%s, user=%s, pass=%s, cip=%s', role, name, pass, ip);
     cltSocket.end('HTTP/1.1 401 Forbidden\r\n' +
       'WWW-Authenticate: Basic realm="example"\r\n' +
       '\r\n');
