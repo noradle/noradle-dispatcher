@@ -1,5 +1,4 @@
 var debug = require('debug')
-  , http = require('http')
   , auth = require('basic-auth')
   , fs = require('fs')
   , frame = require('noradle-protocol').frame
@@ -104,15 +103,44 @@ function serveClientOracle(req, cltSocket, head){
   }
 }
 
-http.createServer()
-  .on('request', serveConsole)
-  .on('upgrade', serveClientOracle)
-  .on('connection', function(){
-    console.log('new connection to dispatcher');
-  }).listen(startCfg.listen_port, function(){
-    console.log('dispatcher is listening at %d for http', startCfg.listen_port);
-  });
+(function startServer(){
 
+  var http = require('http')
+  http.createServer()
+    .on('request', serveConsole)
+    .on('upgrade', serveClientOracle)
+    .on('connection', function(){
+      console.log('new http connection to dispatcher');
+    }).listen(startCfg.listen_port, function(){
+      console.log('dispatcher is listening at %d for http', startCfg.listen_port);
+    });
+
+  var httpsCfg = gConfig.https;
+  if (!httpsCfg) return;
+
+  var https = require('https')
+    , pem = httpsCfg.pem
+    , lAddr = httpsCfg.listen
+    ;
+  try {
+    var pem = {
+      key : fs.readFileSync(pem.keyFile),
+      cert : fs.readFileSync(pem.certFile)
+    };
+    lAddr.port = lAddr.port || 1523;
+    lAddr.host = lAddr.host || '0.0.0.0';
+    https.createServer(pem)
+      .on('request', serveConsole)
+      .on('upgrade', serveClientOracle)
+      .on('connection', function(){
+        console.log('new https connection to dispatcher');
+      }).listen(lAddr.port, lAddr.host, function(){
+        console.log('dispatcher is listening at %s:%d for https', lAddr.host, lAddr.port);
+      });
+  } catch (e) {
+    console.error('https can not started, %j', e)
+  }
+})();
 
 function fakeTCPServer(cltSocket){
   cltSocket.setEncoding('utf8');

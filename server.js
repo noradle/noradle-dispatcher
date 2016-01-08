@@ -34,6 +34,7 @@ global.startCfg = {
   console.log(cfg);
   if (cfg.client_config) {
     client_cfgs = require(cfg.client_config);
+    global.gConfig = client_cfgs;
     if (client_cfgs.client_config) {
       client_cfgs = client_cfgs.client_config;
     }
