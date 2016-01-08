@@ -45,7 +45,7 @@ function serveConsole(req, res){
     return;
   }
   // todo: check console name:pass:ip for every request, no state here
-  if (demoCheck('console', name, pass, ip, secure)) {
+  if (demoCheck(authAttr)) {
     res.writeHead(401, {
       'WWW-authenticate' : 'Basic realm="DISPATCHER"',
       'Content-Type' : 'text/plain'
@@ -70,8 +70,8 @@ function serveClientOracle(req, cltSocket, head){
     return true;
   }
 
-  if (false && demoCheck(role, name, pass, ip, secure)) {
   var authAttr = extract(req);
+  if (demoCheck(authAttr)) {
     cltSocket.end('HTTP/1.1 401 Forbidden\r\n' +
       'WWW-Authenticate: Basic realm="example"\r\n' +
       '\r\n');
@@ -87,7 +87,7 @@ function serveClientOracle(req, cltSocket, head){
   ].join('\r\n');
 
   cltSocket.write(response);
-  logUpgrade('%s passed authorization check, connected', role);
+  logUpgrade('%s passed authorization check, connected', authAttr.role);
 
   // established socket/tunnel have no timeout setting, live forever, check cltSocket._idleTimeout
   cltSocket.setTimeout(0);
@@ -169,26 +169,23 @@ function fakeTCPServer(cltSocket){
  * @param secure
  * @returns {boolean} false:pass, any_string:error_type
  */
-function check(role, user, pass, cip, secure){
+function check(authAttr){
   return true;
 }
 
-function demoCheck(role, name, pass, cip, secure){
-  switch (role) {
+function demoCheck(p){
+  return false;
+  switch (p.role) {
     case 'console':
-      return !(name === 'admin' && pass === 'noradle');
+      return !(p.name === 'admin' && p.pass === 'noradle');
       break;
     case 'client':
-      if (name === 'demo' && pass !== 'demo') {
-        dlog('name:pass error');
+      if (p.name === 'demo' && p.pass !== 'demo') {
         return 'pass';
       }
-      dlog('client address = (%s)', cip);
-      if (name === 'demo' && cip !== '127.0.0.1') {
-        dlog('name:cip error');
+      if (p.name === 'demo' && p.cip !== '127.0.0.1') {
         return 'ip';
       }
-      dlog('name:pass:cip check pass, client is allowed');
       return false;
     case 'oracle':
       return false;
@@ -199,7 +196,7 @@ function demoCheck(role, name, pass, cip, secure){
 
 function checkByConfig(configPath){
   var cfg = require(configPath);
-  return function check(role, user, pass, cip, secure){
+  return function check(authAttr){
     // check according to config rules
     return true;
   }
