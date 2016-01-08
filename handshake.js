@@ -25,7 +25,7 @@ var extract = (function(){
       name : tmp.name,
       pass : tmp.pass,
       cip : byProxy ? '0.0.0.0' : req.socket.remoteAddress,
-      secure : byProxy ? (req.headers["x-forwarded-proto"].match(/wss/)) : (!!req.connection.encrypted)
+      secure : !!(byProxy ? req.headers["x-forwarded-proto"].match(/(wss|https)/) : req.connection.encrypted)
     };
     (upgrade ? logUpgrade : logRequest)(authAttr);
     return authAttr;
