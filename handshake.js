@@ -1,5 +1,4 @@
 var debug = require('debug')
-  , auth = require('basic-auth')
   , fs = require('fs')
   , frame = require('noradle-protocol').frame
   , main = require('./dispatch.js')
@@ -14,25 +13,37 @@ var debug = require('debug')
 // dispatcher give a random code
 // client send md5(passwd+random) back to dispatcher to test
 
+var extract = (function(){
+  var auth = require('basic-auth');
+  return function extract(req){
+    var tmp = auth(req) || {name : '', pass : ''}
+      , upgrade = !!req.headers.upgrade
+      , byProxy = !!req.headers["x-forwarded-proto"]
+      ;
+    var authAttr = {
+      role : req.headers['x-noradle-role'] || (upgrade ? 'console' : ''),
+      name : tmp.name,
+      pass : tmp.pass,
+      cip : byProxy ? '0.0.0.0' : req.socket.remoteAddress,
+      secure : byProxy ? (req.headers["x-forwarded-proto"].match(/wss/)) : (!!req.connection.encrypted)
+    };
+    (upgrade ? logUpgrade : logRequest)(authAttr);
+    return authAttr;
+  };
+})();
+
 function serveConsole(req, res){
   logRequest('client normal request arrived, it must be from noradle-console');
   logRequest('req.url=%s', req.url);
   logRequest('req.headers=%s', JSON.stringify(req.headers, null, 2));
-  var role = req.headers['x-noradle-role'] || 'console'
-    , tmp = auth(req) || {name : '', pass : ''}
-    , name = tmp.name
-    , pass = tmp.pass
-    , ip = req.socket.remoteAddress
-    , secure = !!req.connection.encrypted
-    ;
-  if (role !== 'console') {
+  authAttr = extract(req);
+  if (authAttr.role !== 'console') {
     res.writeHead(401, {'Content-Type' : 'text/plain'});
     res.write('only noradle-console is allowed to access');
     res.end();
     logRequest('role!==console');
     return;
   }
-  logRequest('role=%s, user=%s, pass=%s, cip=%s, secure=%s', role, name, pass, ip, secure);
   // todo: check console name:pass:ip for every request, no state here
   if (demoCheck('console', name, pass, ip, secure)) {
     res.writeHead(401, {
@@ -44,7 +55,7 @@ function serveConsole(req, res){
     logRequest('user:pass:ip check failed');
     return;
   }
-  logRequest('%s passed authorization check, serve it', role);
+  logRequest('%s passed authorization check, serve it', authAttr.role);
   main.serveConsole(req, res);
 }
 
@@ -59,16 +70,8 @@ function serveClientOracle(req, cltSocket, head){
     return true;
   }
 
-  var role = req.headers['x-noradle-role']
-    , namepass = auth(req) || {name : '', pass : ''}
-    , name = namepass.name
-    , pass = namepass.pass
-    , ip = cltSocket.remoteAddress
-    , secure = !!cltSocket.encrypted
-    ;
-
-  logUpgrade('role=%s, user=%s, pass=%s, cip=%s, secure=%s', role, name, pass, ip, secure);
   if (false && demoCheck(role, name, pass, ip, secure)) {
+  var authAttr = extract(req);
     cltSocket.end('HTTP/1.1 401 Forbidden\r\n' +
       'WWW-Authenticate: Basic realm="example"\r\n' +
       '\r\n');
@@ -89,11 +92,11 @@ function serveClientOracle(req, cltSocket, head){
   // established socket/tunnel have no timeout setting, live forever, check cltSocket._idleTimeout
   cltSocket.setTimeout(0);
 
-  switch (role) {
+  switch (authAttr.role) {
     case 'client':
       // process frame
       // fakeTCPServer(cltSocket);
-      main.serveClient(cltSocket, name);
+      main.serveClient(cltSocket, authAttr.name);
       break;
     case 'oracle':
       // register in dbPools
