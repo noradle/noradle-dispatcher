@@ -24,6 +24,7 @@ var extract = (function(){
       role : req.headers['x-noradle-role'] || (upgrade ? 'console' : ''),
       name : tmp.name,
       pass : tmp.pass,
+      byProxy : byProxy,
       cip : byProxy ? '0.0.0.0' : req.socket.remoteAddress,
       secure : !!(byProxy ? req.headers["x-forwarded-proto"].match(/(wss|https)/) : req.connection.encrypted)
     };
