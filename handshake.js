@@ -23,6 +23,7 @@ function serveConsole(req, res){
     , name = tmp.name
     , pass = tmp.pass
     , ip = req.socket.remoteAddress
+    , secure = !!req.connection.encrypted
     ;
   if (role !== 'console') {
     res.writeHead(401, {'Content-Type' : 'text/plain'});
@@ -31,9 +32,9 @@ function serveConsole(req, res){
     logRequest('role!==console');
     return;
   }
-  logRequest('role=%s, user=%s, pass=%s, cip=%s', role, name, pass, ip);
+  logRequest('role=%s, user=%s, pass=%s, cip=%s, secure=%s', role, name, pass, ip, secure);
   // todo: check console name:pass:ip for every request, no state here
-  if (demoCheck('console', name, pass, ip)) {
+  if (demoCheck('console', name, pass, ip, secure)) {
     res.writeHead(401, {
       'WWW-authenticate' : 'Basic realm="DISPATCHER"',
       'Content-Type' : 'text/plain'
@@ -49,7 +50,7 @@ function serveConsole(req, res){
 
 function serveClientOracle(req, cltSocket, head){
   // connect to an origin server
-  logUpgrade('client|oracle upgrade request arrived');
+  logUpgrade('client|oracle upgrade request arrived (secure=%s)', !!cltSocket.encrypted);
   logUpgrade('req.headers=%s', JSON.stringify(req.headers, null, 2));
 
   // ensure the client init request can pass through proxy(support websocket relay) to noradle dispatcher
@@ -63,10 +64,11 @@ function serveClientOracle(req, cltSocket, head){
     , name = namepass.name
     , pass = namepass.pass
     , ip = cltSocket.remoteAddress
+    , secure = !!cltSocket.encrypted
     ;
 
-  if (false && demoCheck(role, name, pass, ip)) {
-    logUpgrade('role=%s, user=%s, pass=%s, cip=%s', role, name, pass, ip);
+  logUpgrade('role=%s, user=%s, pass=%s, cip=%s, secure=%s', role, name, pass, ip, secure);
+  if (false && demoCheck(role, name, pass, ip, secure)) {
     cltSocket.end('HTTP/1.1 401 Forbidden\r\n' +
       'WWW-Authenticate: Basic realm="example"\r\n' +
       '\r\n');
@@ -161,21 +163,14 @@ function fakeTCPServer(cltSocket){
  * @param user
  * @param pass
  * @param cip
+ * @param secure
  * @returns {boolean} false:pass, any_string:error_type
  */
-function check(role, user, pass, cip){
+function check(role, user, pass, cip, secure){
   return true;
 }
 
-/**
- *
- * @param role
- * @param name
- * @param pass
- * @param cip
- * @returns {String|Boolean} String for error info, true for fail with no reason, false for ok
- */
-function demoCheck(role, name, pass, cip){
+function demoCheck(role, name, pass, cip, secure){
   switch (role) {
     case 'console':
       return !(name === 'admin' && pass === 'noradle');
@@ -201,7 +196,7 @@ function demoCheck(role, name, pass, cip){
 
 function checkByConfig(configPath){
   var cfg = require(configPath);
-  return function check(role, user, pass, cip){
+  return function check(role, user, pass, cip, secure){
     // check according to config rules
     return true;
   }
