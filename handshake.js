@@ -39,14 +39,14 @@ function serveConsole(req, res){
     return;
   }
   // todo: check console name:pass:ip for every request, no state here
-  if (demoCheck(authAttr)) {
+  if (global.authChecker(authAttr)) {
     res.writeHead(401, {
       'WWW-authenticate' : 'Basic realm="DISPATCHER"',
       'Content-Type' : 'text/plain'
     });
     res.write('you are not allowed');
     res.end();
-    logRequest('user:pass:ip check failed');
+    logRequest('user:pass:ip:secure check failed');
     return;
   }
   logRequest('%s passed authorization check, serve it', authAttr.role);
@@ -65,7 +65,7 @@ function serveClientOracle(req, cltSocket, head){
   }
 
   var authAttr = extract(req);
-  if (demoCheck(authAttr)) {
+  if (global.authChecker(authAttr)) {
     cltSocket.end('HTTP/1.1 401 Forbidden\r\n' +
       'WWW-Authenticate: Basic realm="example"\r\n' +
       '\r\n');
@@ -145,43 +145,13 @@ exports.bindServer = bindServer;
 /**
  * check if client is allowed to access dispatcher service
  * by default, use a configuration file
- * @param role
- * @param user
- * @param pass
- * @param cip
- * @param secure
- * @returns {boolean} false:pass, any_string:error_type
+ * @param authAttr.role {string} in (client/oracle/console)
+ * @param authAttr.name {string} username for client/oracle/console
+ * @param authAttr.pass {string} password
+ * @param authAttr.cip {string} the client ip
+ * @param authAttr.secure {boolean} if connect with SSL
+ * @returns {boolean} false:pass, any_string:error_message
  */
 function check(authAttr){
-  return true;
-}
-
-function demoCheck(p){
   return false;
-  switch (p.role) {
-    case 'console':
-      return !(p.name === 'admin' && p.pass === 'noradle');
-      break;
-    case 'client':
-      if (p.name === 'demo' && p.pass !== 'demo') {
-        return 'pass';
-      }
-      if (p.name === 'demo' && p.cip !== '127.0.0.1') {
-        return 'ip';
-      }
-      return false;
-    case 'oracle':
-      return false;
-      break;
-  }
-  return true;
 }
-
-function checkByConfig(configPath){
-  var cfg = require(configPath);
-  return function check(authAttr){
-    // check according to config rules
-    return true;
-  }
-}
-
