@@ -6,13 +6,6 @@ var debug = require('debug')
   , logUpgrade = debug('dispatcher:onUpgrade')
   ;
 
-// todo : secure client authenticate
-// may support dynamic client auth with database
-// or use dynamic cfg file that can be updated at runtime
-// then can be CHAP code later to protect password transfer
-// dispatcher give a random code
-// client send md5(passwd+random) back to dispatcher to test
-
 var extract = (function(){
   var auth = require('basic-auth');
   return function extract(req){
