@@ -142,18 +142,6 @@ exports.bindServer = bindServer;
   }
 })();
 
-function fakeTCPServer(cltSocket){
-  cltSocket.setEncoding('utf8');
-  cltSocket.on('data', function(data){
-    dlog('received (%s)', data);
-    cltSocket.write('a response frame');
-  });
-  cltSocket.on('end', function(){
-    dlog('client disconnect');
-    cltSocket.end();
-  });
-}
-
 /**
  * check if client is allowed to access dispatcher service
  * by default, use a configuration file
