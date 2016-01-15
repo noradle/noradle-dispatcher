@@ -4,7 +4,10 @@ var program = require('commander');
 
 program
   .version(require('./package.json').version)
-  .option('-p, --listen_port [port]', 'listening port', 1522)
+  .option('--listen-http [port:host]', 'http listening address', 1522)
+  .option('--listen-https [port:host]', 'https listening address', 1523)
+  .option('--pem-prefix [path prefix of pem file]', 'SSL cert prefix, use {key: $(prefix)-key.pem, cert: $(prefix)-cert.pem} for https server')
+  .option('--listen-path [filepath]', 'unix-domain-socket/windows-named-pipe path')
   .option('-c, --client_config [file]', 'client control configuration file path')
   .option('-k, --keep_alive_interval [seconds]', 'keep_alive_interval', parseInt)
   .option('-a, --auth_checker_path [file(js function or json static config)]', 'authentication func or config')
@@ -17,8 +20,8 @@ program
   .parse(process.argv)
 ;
 
+global.args = program;
 global.startCfg = {
-  listen_port : program.listen_port,
   client_config : program.client_config,
   auth_checker_path : program.auth_checker_path,
   keep_alive_interval : program.keep_alive_interval || 280,

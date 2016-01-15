@@ -1,5 +1,4 @@
 var debug = require('debug')
-  , fs = require('fs')
   , frame = require('noradle-protocol').frame
   , main = require('./dispatch.js')
   , logRequest = debug('dispatcher:onRequest')
@@ -117,29 +116,69 @@ exports.bindServer = bindServer;
 
 (function startServer(){
 
-  bindServer(require('http').createServer()).listen(startCfg.listen_port, function(){
-    console.log('dispatcher is listening at %d for http', startCfg.listen_port);
-  });
+  function getOptions(listenAddr){
+    var lAddr = listenAddr.split(':')
+      , port = parseInt(lAddr[0])
+      , host = lAddr[1]
+      , options = {port : port}
+      ;
 
-  var httpsCfg = gConfig.https;
-  if (!httpsCfg) return;
-
-  var pem = httpsCfg.pem
-    , lAddr = httpsCfg.listen
-    ;
-  try {
-    var pem = {
-      key : fs.readFileSync(pem.keyFile),
-      cert : fs.readFileSync(pem.certFile)
-    };
-    lAddr.port = lAddr.port || 1523;
-    lAddr.host = lAddr.host || '0.0.0.0';
-    bindServer(require('https').createServer(pem)).listen(lAddr.port, lAddr.host, function(){
-      console.log('dispatcher is listening at %s:%d for https', lAddr.host, lAddr.port);
-    });
-  } catch (e) {
-    console.error('https can not started, %j', e)
+    if (host && host.length === 0) {
+      host = 'localhost';
+    }
+    if (host) {
+      options.host = host;
+    }
+    return options;
   }
+
+  (function listenHTTP(){
+    if (!global.args.listenHttp) return;
+    var o = getOptions(global.args.listenHttp);
+    if (o.host) {
+      bindServer(require('http').createServer()).listen(o.port, o.host, function(){
+        console.log('dispatcher is listening at %s for http', global.args.listenHttp);
+      });
+    } else {
+      bindServer(require('http').createServer()).listen(o.port, function(){
+        console.log('dispatcher is listening at %s for http', global.args.listenHttp);
+      });
+    }
+  })();
+
+  (function listenPath(){
+    if (!global.args.listenPath) return;
+    bindServer(require('http').createServer()).listen(global.args.listenPath, function(){
+      console.log('dispatcher is listening at %s for http', global.args.listenPath);
+    });
+  })();
+
+  (function listenHttps(){
+    if (!global.args.listenHttps) return;
+    if (!global.args.pemPrefix) return;
+    var fs = require('fs')
+      , pemPrefix = global.args.pemPrefix
+      ;
+    try {
+      var pem = {
+        key : fs.readFileSync(pemPrefix + '-key.pem'),
+        cert : fs.readFileSync(pemPrefix + '-cert.pem')
+      };
+      var o = getOptions(global.args.listenHttps);
+      if (o.host) {
+        bindServer(require('https').createServer(pem)).listen(o.port, o.host, function(){
+          console.log('dispatcher is listening at %s for https', global.args.listenHttps);
+        });
+      } else {
+        bindServer(require('https').createServer(pem)).listen(o.port, function(){
+          console.log('dispatcher is listening at %s for https', global.args.listenHttps);
+        });
+      }
+    } catch (e) {
+      console.error('https can not started, %s', e, console.log(pemPrefix));
+    }
+  })();
+
 })();
 
 /**
