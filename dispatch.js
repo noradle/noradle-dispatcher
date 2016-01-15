@@ -294,10 +294,11 @@ exports.serveOracle = function serveOracle(c, headers){
     , oSlotID = oraSession.slotID
     , connSeq = ++gConnSeq
     ;
-  if (!oraSession) {
+  if (!oraSession.slotID) {
+    // delay signal oracle for quit, prevent oracle from repeating re-connect
     setTimeout(function(){
       signalOracleQuit(c);
-    }, keepAliveInterval * 1000);
+    }, keepAliveInterval * 3000);
     return;
   }
   oraSessions[oSlotID] = oraSession;
