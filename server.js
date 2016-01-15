@@ -11,12 +11,6 @@ program
   .option('-c, --client_config [file]', 'client control configuration file path')
   .option('-k, --keep_alive_interval [seconds]', 'keep_alive_interval', parseInt)
   .option('-a, --auth_checker_path [file(js function or json static config)]', 'authentication func or config')
-  .option('--db_name [value]', 'db_name filter')
-  .option('--db_domain [value]', 'db_domain filter')
-  .option('--db_unique_name [value]', 'db_unique_name filter')
-  .option('--db_instance [value]', 'db_instance filter', parseInt)
-  .option('--db_role [value]', 'db_role filter')
-  .option('--db_cfg_id [value]', 'db_cfg_id filter')
   .parse(process.argv)
 ;
 

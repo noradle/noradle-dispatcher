@@ -214,16 +214,6 @@ function Session(headers, socket){
     cfg_id : headers['x-cfg_id']
   };
 
-  for (var n in db) {
-    if (startCfg.db[n] && startCfg.db[n] !== db[n]) {
-      // todo: add warning
-      logLifeCycle('db[%s] not match %s(config) != %s(incoming)', n, startCfg.db[n], db[n]);
-      logLifeCycle(db);
-      logLifeCycle(startCfg.db);
-      return false;
-    }
-  }
-
   // fixed properties
   this.slotID = parseInt(headers['x-oslot_id']);
   this.session = session;
