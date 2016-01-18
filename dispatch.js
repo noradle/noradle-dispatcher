@@ -261,21 +261,21 @@ function afterNewAvailableOSlot(oSlotID, isNew){
   }
 }
 
-function signalAskOSP(c, queue){
-  concurrencyHW = queue.length + oSlotCnt;
-  var arr = ['ASK_OSP', '', 'queue_len', queue.length, 'oslot_cnt', oSlotCnt];
+function toOracle(c, arr){
   frame.writeFrame(c, 0, C.HEAD_FRAME, 0, (new Buffer(arr.join('\r\n')) + '\r\n\r\n\r\n'));
   frame.writeFrame(c, 0, C.END_FRAME, 0, null);
 }
+function signalAskOSP(c, queue){
+  concurrencyHW = queue.length + oSlotCnt;
+  toOracle(c, ['ASK_OSP', '', 'queue_len', queue.length, 'oslot_cnt', oSlotCnt]);
+}
 
 function signalOracleQuit(c){
-  frame.writeFrame(c, 0, C.HEAD_FRAME, 0, (new Buffer(['QUIT', ''].join('\r\n')) + '\r\n\r\n\r\n'));
-  frame.writeFrame(c, 0, C.END_FRAME, 0, null);
+  toOracle(c, ['QUIT', '']);
 }
 
 function signalOracleKeepAlive(c){
-  frame.writeFrame(c, 0, C.HEAD_FRAME, 0, (new Buffer(['KEEPALIVE', '', 'keepAliveInterval', keepAliveInterval, '', '', ''].join('\r\n')) ));
-  frame.writeFrame(c, 0, C.END_FRAME, 0, null);
+  toOracle(c, ['KEEPALIVE', '', 'keepAliveInterval', keepAliveInterval]);
 }
 
 // for oracle reverse connection
