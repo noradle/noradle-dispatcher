@@ -40,7 +40,7 @@ function serveConsole(req, res){
   // todo: check console name:pass:ip for every request, no state here
   if (global.authChecker(authAttr)) {
     res.writeHead(401, {
-      'WWW-authenticate' : 'Basic realm="DISPATCHER"',
+      'WWW-authenticate' : 'Basic realm="NORADLE"',
       'Content-Type' : 'text/plain'
     });
     res.write('you are not allowed');
@@ -64,9 +64,17 @@ function serveClientOracle(req, cltSocket, head){
   }
 
   var authAttr = extract(req);
+
+  if (!authAttr.role.match(/^(client|oracle)$/)) {
+    cltSocket.end('HTTP/1.1 401 Forbidden\r\n' +
+      'WWW-Authenticate: Basic realm="NORADLE"\r\n' +
+      '\r\n');
+    return;
+  }
+
   if (global.authChecker(authAttr)) {
     cltSocket.end('HTTP/1.1 401 Forbidden\r\n' +
-      'WWW-Authenticate: Basic realm="example"\r\n' +
+      'WWW-Authenticate: Basic realm="NORADLE"\r\n' +
       '\r\n');
     return;
   }
@@ -87,17 +95,13 @@ function serveClientOracle(req, cltSocket, head){
 
   switch (authAttr.role) {
     case 'client':
-      // process frame
-      // fakeTCPServer(cltSocket);
+      // receive client requests
       main.serveClient(cltSocket, authAttr.name);
       break;
     case 'oracle':
-      // register in dbPools
+      // register oracle connections in dbPools
       main.serveOracle(cltSocket, req.headers);
       break;
-    default:
-      // fake service for every on.data data
-      fakeTCPServer(cltSocket);
   }
 }
 
