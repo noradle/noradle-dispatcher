@@ -263,8 +263,8 @@ function afterNewAvailableOSlot(oSlotID, isNew){
 
 function toOracle(c, arr){
   frame.writeFrame(c, 0, C.HEAD_FRAME, 0, (new Buffer(arr.join('\r\n')) + '\r\n\r\n\r\n'));
-  frame.writeFrame(c, 0, C.END_FRAME, 0, null);
 }
+
 function signalAskOSP(c, queue){
   concurrencyHW = queue.length + oSlotCnt;
   toOracle(c, ['ASK_OSP', '', 'queue_len', queue.length, 'oslot_cnt', oSlotCnt]);
