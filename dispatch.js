@@ -63,6 +63,7 @@ var net = require('net')
 var debug = require('debug')
   , logLifeCycle = debug('dispatcher:lifecycle')
   , logDispatch = debug('dispatcher:dispatch')
+  , logMan = debug('dispatcher:man')
   , logGrace = debug('dispatcher:grace')
   ;
 
@@ -77,7 +78,7 @@ function Client(c, cSeq, cid){
   this.cid = cid;
   this.cSlots = new Array(C.CLI_MAX_SLOTS);
   var cfg = client_cfgs[cid];
-  this.cur_concurrency = cfg.min_concurrency;
+  this.cur_concurrency = 0;
   this.cfg = cfg;
 }
 
@@ -110,6 +111,30 @@ function parseNVArray(arr){
   return o;
 }
 
+function getClientConfig(client){
+  var arr = ['CLI_CFG', '', 'm$cid', client.cid, 'm$cseq', client.cSeq];
+  if (freeOraSlotIDs.length > 0) {
+    logMan('fetchClientConfig send %j', arr);
+    toOracle(oraSessions[freeOraSlotIDs[0]].socket, arr);
+  } else {
+    logMan('fetchClientConfig wait %j', arr);
+    queue.push(arr);
+  }
+}
+
+function gotClientConfig(body){
+  var cfg = parseNVArray(body.toString().split("\0"))
+    , cSeq = parseInt(cfg.cseq)
+    , client = clients[cSeq]
+    , c = client.socket
+    ;
+  logMan('fetchClientConfig got %j', cfg);
+  client.cur_concurrency = parseInt(cfg.min_concurrency);
+  client.cfg.min_concurrency = parseInt(cfg.min_concurrency);
+  client.cfg.max_concurrency = parseInt(cfg.max_concurrency);
+  frame.writeFrame(c, 0, C.SET_CONCURRENCY, 0, JSON.stringify(client.cur_concurrency));
+}
+
 // may accept from different front nodejs connection request
 exports.serveClient = function serveClient(c, cid){
   var cSeq = findMinFreeCSeq()
@@ -118,8 +143,11 @@ exports.serveClient = function serveClient(c, cid){
     ;
 
   logLifeCycle('node(%d) connected', cSeq);
-  frame.writeFrame(c, 0, C.SET_CONCURRENCY, 0, JSON.stringify(client.cur_concurrency));
-  logLifeCycle('write set_concurrency to %d', client.cur_concurrency);
+  // got client concurrency quota from oracle
+  // send cid,cSeq to oracle, require cid's conncurrency quota
+  // initial set to 0, donn't need to send it, client' initial freelist is []
+  // when oracle return quota, call below to signal client he have this number of concurrency
+  getClientConfig(client);
 
   c.on('end', function(){
     c.end();
@@ -247,6 +275,12 @@ function afterNewAvailableOSlot(oSlotID, isNew){
       signalAskOSP(oraSessions[oSlotID].socket, queue);
     }
     // use slotID to send w request
+    if (w.length > 2) {
+      // for management frame
+      logMan('fetchClientConfig pop %j', w);
+      toOracle(oraSessions[oSlotID].socket, w);
+      return;
+    }
     var cSeq = w[0]
       , cSlotID = w[1]
       , client = clients[cSeq]
@@ -349,6 +383,11 @@ exports.serveOracle = function serveOracle(c, headers){
           freeOraSlotIDs.splice(index, 1);
           signalOracleQuit(c);
         }
+      } else if (type === C.RES_CLI_CFG) {
+        gotClientConfig(body);
+        return;
+      } else {
+        logMan('unknown management frame %j', body.toString().split('\0'));
       }
     } else {
       // redirect frame to the right client socket untouched
