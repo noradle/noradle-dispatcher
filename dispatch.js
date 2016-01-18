@@ -102,6 +102,14 @@ function findMinFreeCSeq(){
   return clientsHW++;
 }
 
+function parseNVArray(arr){
+  var o = {};
+  for (var i = 0, len = arr.length; i < len; i += 2) {
+    o[arr[i]] = arr[i + 1];
+  }
+  return o;
+}
+
 // may accept from different front nodejs connection request
 exports.serveClient = function serveClient(c, cid){
   var cSeq = findMinFreeCSeq()
