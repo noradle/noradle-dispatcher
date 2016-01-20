@@ -108,13 +108,11 @@ function parseNVArray(arr){
 
 function getClientConfig(client){
   var arr = ['CLI_CFG', '', 'm$cid', client.cid, 'm$cseq', client.cSeq];
-  if (freeOraSlotIDs.length > 0) {
+  getFreeOSlot(function(oSlotID, oSock){
     logMan('fetchClientConfig send %j', arr);
-    toOracle(oraSessions[freeOraSlotIDs[0]].socket, arr);
-  } else {
-    logMan('fetchClientConfig wait %j', arr);
-    queue.push(arr);
-  }
+    toOracle(oSock, arr);
+    afterNewAvailableOSlot(oSlotID, false);
+  });
 }
 
 function gotClientConfig(body){
@@ -187,32 +185,17 @@ exports.serveClient = function serveClient(c, cid){
         , head0 = frame.makeFrameHead(cSlotID, C.PRE_HEAD, 0, body0.length)
         ;
       cStats.reqCount++;
-      req = client.cSlots[cSlotID] = {rcvTime : Date.now()};
-      // for the first frame of a request
-      if (freeOraSlotIDs.length > 0) {
-        oSlotID = freeOraSlotIDs.shift();
+      req = client.cSlots[cSlotID] = {
+        rcvTime : Date.now(),
+        buf : [head0, body0, head, body]
+      };
+      getFreeOSlot(function(oSlotID, oSock){
+        oSock.write(Buffer.concat(req.buf));
+        delete req.buf;
         bindOSlot(req, cSeq, cSlotID, client.cTime, oSlotID);
-        oSock = oraSessions[oSlotID].socket;
-        oSock.write(head0);
-        oSock.write(body0);
-        oSock.write(head);
-        oSock.write(body);
         req.sendTime = Date.now();
-        logDispatch('C2O: (%d,%d) head frame find oSlotID', cSlotID, oSlotID);
-      } else {
-        // init buf, add to queue
-        req.buf = [head0, body0, head, body];
-        queue.push(function(oSlotID, oSock){
-          logDispatch('unshift queue item cseq=%d, cSlotID=%d, req(chunks)=%d', cSeq, cSlotID, req.buf.length);
-          oSock.write(Buffer.concat(req.buf));
-          delete req.buf;
-          bindOSlot(req, cSeq, cSlotID, client.cTime, oSlotID);
-          req.sendTime = Date.now();
-          logDispatch('switch %j to use oSlot(%d)', w, oSlotID);
-        });
-        logDispatch('C2O: (%d,_) head frame no free slot, push to queue', cSlotID);
-      }
-
+        logDispatch('C2O: (%d,%d) found oSlot to send', cSlotID, oSlotID);
+      });
     } else {
       req = client.cSlots[cSlotID];
       // for the successive frames of a request
@@ -270,6 +253,15 @@ function Session(headers, socket){
   }
 }
 
+function getFreeOSlot(cb){
+  if (freeOraSlotIDs.length > 0) {
+    var oSlotID = freeOraSlotIDs.shift();
+    cb(oSlotID, oraSessions[oSlotID].socket);
+  } else {
+    queue.push(cb);
+  }
+}
+
 function afterNewAvailableOSlot(oSlotID, isNew){
   logDispatch('BUF: (%d) oSlot free (%s), queue length=%d', oSlotID, isNew ? 'newly' : 'recycled', queue.length);
   var w = queue.shift();
@@ -278,14 +270,7 @@ function afterNewAvailableOSlot(oSlotID, isNew){
     if (queue.length + oSlotCnt > concurrencyHW) {
       signalAskOSP(oraSessions[oSlotID].socket, queue);
     }
-    // use slotID to send w request
-    if (w.length > 2) {
-      // for management frame
-      logMan('fetchClientConfig pop %j', w);
-      toOracle(oraSessions[oSlotID].socket, w);
-      afterNewAvailableOSlot(oSlotID, isNew);
-      return;
-    }
+    w(oSlotID, oraSessions[oSlotID].socket);
   } else {
     concurrencyHW = oSlotCnt;
     if (isNew) {
