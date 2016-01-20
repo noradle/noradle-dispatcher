@@ -341,13 +341,15 @@ exports.serveOracle = function serveOracle(c, headers){
       // control frame from oracle
       switch (type) {
         case C.RO_QUIT:
-          // oracle want to quit, if oSlot is free then quit, otherwise make oSlot is quitting, quit when release
-          oraSessions[oSlotID].quitting = true;
-          var index = freeOraSlotIDs.indexOf(oSlotID);
-          if (index >= 0) {
-            freeOraSlotIDs.splice(index, 1);
-            signalOracleQuit(c);
-          }
+          (function gotOracleQuitting(oSlotID){
+            // oracle want to quit, if oSlot is free then quit, otherwise make oSlot is quitting, quit when release
+            oraSessions[oSlotID].quitting = true;
+            var index = freeOraSlotIDs.indexOf(oSlotID);
+            if (index >= 0) {
+              freeOraSlotIDs.splice(index, 1);
+              signalOracleQuit(c);
+            }
+          })(oSlotID);
           return;
         case C.RES_CLI_CFG:
           (function gotClientConfig(body){
