@@ -106,19 +106,6 @@ function parseNVArray(arr){
   return o;
 }
 
-function gotClientConfig(body){
-  var cfg = parseNVArray(body.toString().split("\0"))
-    , cSeq = parseInt(cfg.cseq)
-    , client = clients[cSeq]
-    , c = client.socket
-    ;
-  logMan('fetchClientConfig got %j', cfg);
-  client.cur_concurrency = parseInt(cfg.min_concurrency);
-  client.cfg.min_concurrency = parseInt(cfg.min_concurrency);
-  client.cfg.max_concurrency = parseInt(cfg.max_concurrency);
-  frame.writeFrame(c, 0, C.SET_CONCURRENCY, 0, JSON.stringify(client.cur_concurrency));
-}
-
 // may accept from different front nodejs connection request
 exports.serveClient = function serveClient(c, cid){
   var cSeq = findMinFreeCSeq()
@@ -363,7 +350,18 @@ exports.serveOracle = function serveOracle(c, headers){
           }
           return;
         case C.RES_CLI_CFG:
-          gotClientConfig(body);
+          (function gotClientConfig(body){
+            var cfg = parseNVArray(body.toString().split("\0"))
+              , cSeq = parseInt(cfg.cseq)
+              , client = clients[cSeq]
+              , c = client.socket
+              ;
+            logMan('fetchClientConfig got %j', cfg);
+            client.cur_concurrency = parseInt(cfg.min_concurrency);
+            client.cfg.min_concurrency = parseInt(cfg.min_concurrency);
+            client.cfg.max_concurrency = parseInt(cfg.max_concurrency);
+            frame.writeFrame(c, 0, C.SET_CONCURRENCY, 0, JSON.stringify(client.cur_concurrency));
+          })(body);
           return;
         default:
           logMan('unknown management frame %j', body.toString().split('\0'));
