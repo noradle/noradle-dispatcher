@@ -341,7 +341,7 @@ exports.serveOracle = function serveOracle(c, headers){
       // control frame from oracle
       switch (type) {
         case C.RO_QUIT:
-          (function gotOracleQuitting(oSlotID){
+          return (function gotOracleQuitting(oSlotID){
             // oracle want to quit, if oSlot is free then quit, otherwise make oSlot is quitting, quit when release
             oraSessions[oSlotID].quitting = true;
             var index = freeOraSlotIDs.indexOf(oSlotID);
@@ -350,9 +350,8 @@ exports.serveOracle = function serveOracle(c, headers){
               signalOracleQuit(c);
             }
           })(oSlotID);
-          return;
         case C.RES_CLI_CFG:
-          (function gotClientConfig(body){
+          return (function gotClientConfig(body){
             var cfg = parseNVArray(body.toString().split("\0"))
               , cSeq = parseInt(cfg.cseq)
               , client = clients[cSeq]
@@ -364,7 +363,6 @@ exports.serveOracle = function serveOracle(c, headers){
             client.cfg.max_concurrency = parseInt(cfg.max_concurrency);
             frame.writeFrame(c, 0, C.SET_CONCURRENCY, 0, JSON.stringify(client.cur_concurrency));
           })(body);
-          return;
         default:
           logMan('unknown management frame %j', body.toString().split('\0'));
       }
