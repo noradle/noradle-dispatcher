@@ -283,6 +283,7 @@ function afterNewAvailableOSlot(oSlotID, isNew){
       // for management frame
       logMan('fetchClientConfig pop %j', w);
       toOracle(oraSessions[oSlotID].socket, w);
+      afterNewAvailableOSlot(oSlotID, isNew);
       return;
     }
     var cSeq = w[0]
