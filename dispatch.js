@@ -119,7 +119,7 @@ exports.serveClient = function serveClient(c, cid){
   // initial set to 0, donn't need to send it, client' initial freelist is []
   // when oracle return quota, call below to signal client he have this number of concurrency
   (function getClientConfig(){
-    getFreeOSlot(function(oSlotID, oSock){
+    getFreeOSlot(function(oSlotID, oSlot, oSock){
       var arr = ['CLI_CFG', '', 'm$cid', client.cid, 'm$cseq', client.cSeq];
       logMan('fetchClientConfig send %j', arr);
       toOracle(oSock, arr);
@@ -174,7 +174,7 @@ exports.serveClient = function serveClient(c, cid){
         rcvTime : Date.now(),
         buf : [head0, body0, head, body]
       };
-      getFreeOSlot(function(oSlotID, oSock){
+      getFreeOSlot(function(oSlotID, oSlot, oSock){
         oSock.write(Buffer.concat(req.buf));
         delete req.buf;
         bindOSlot(req, cSeq, cSlotID, client.cTime, oSlotID);
@@ -240,8 +240,11 @@ function Session(headers, socket){
 
 function getFreeOSlot(cb){
   if (freeOraSlotIDs.length > 0) {
-    var oSlotID = freeOraSlotIDs.shift();
-    cb(oSlotID, oraSessions[oSlotID].socket);
+    var oSlotID = freeOraSlotIDs.shift()
+      , oSlot = oraSessions[oSlotID]
+      , oSock = oSlot.socket
+      ;
+    cb(oSlotID, oSlot, oSock);
   } else {
     queue.push(cb);
   }
@@ -255,7 +258,10 @@ function afterNewAvailableOSlot(oSlotID, isNew){
     if (queue.length + oSlotCnt > concurrencyHW) {
       signalAskOSP(oraSessions[oSlotID].socket, queue);
     }
-    w(oSlotID, oraSessions[oSlotID].socket);
+    var oSlot = oraSessions[oSlotID]
+      , oSock = oSlot.socket
+      ;
+    w(oSlotID, oSlot, oSock);
   } else {
     concurrencyHW = oSlotCnt;
     if (isNew) {
