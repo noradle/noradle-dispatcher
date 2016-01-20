@@ -194,6 +194,43 @@ exports.serveClient = function serveClient(c, cid){
   });
 };
 
+
+// may accept from different front nodejs connection request
+var scgiReqSeq = 0
+  ;
+exports.serveSCGI = function serveSCGI(c, cid){
+  var cSeq = ++scgiReqSeq
+    , cSlotID = cSeq
+    ;
+  logLifeCycle('SCGI(%d) connected');
+
+  c.on('end', function(){
+    c.end();
+    logLifeCycle('SCGI(%d) disconnected', cSeq);
+  });
+
+  c.on('error', function(err){
+    console.error('SCGI socket error', err, cSeq);
+    delete clients[cSeq];
+  });
+
+  c.on('close', function(has_error){
+    logLifeCycle('SCGI(%d) close', cSeq);
+    delete clients[cSeq];
+  });
+
+  getFreeOSlot(function sendStream(oSlotID, oSlot, oSock){
+    oSlot.cType = C.SCGI;
+    oSlot.cliSock = c;
+    var body0 = new Buffer(['SCGI', cid, cSlotID].join(','))
+      , head0 = frame.makeFrameHead(cSlotID, C.PRE_HEAD, 0, body0.length)
+      ;
+    oSock.write(head0);
+    oSock.write(body0);
+    c.pipe(oSock, {end : false});
+  });
+};
+
 function Session(headers, socket){
 
   oSlotCnt++;
@@ -411,7 +448,15 @@ exports.serveOracle = function serveOracle(c, headers){
               // requesting client is gone
             }
           })();
-          break;
+        case C.SCGI:
+          return (function gotRespSCGI(){
+            var cliSock = oraSession.cliSock;
+            //cliSock.write(head);
+            body && cliSock.write(body);
+            if (type === C.END_FRAME) {
+              cliSock.end();
+            }
+          })();
       }
     }
   });
