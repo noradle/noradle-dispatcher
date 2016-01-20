@@ -82,15 +82,6 @@ function Client(c, cSeq, cid){
   this.cfg = cfg;
 }
 
-function bindOSlot(req, cSeq, cSlotID, cTime, oSlotID){
-  req.oSlotID = oSlotID;
-  var oraSlot = oraSessions[oSlotID];
-  oraSlot.cType = C.NORADLE;
-  oraSlot.cSeq = cSeq;
-  oraSlot.cSlotID = cSlotID;
-  oraSlot.cTime = cTime;
-}
-
 function findMinFreeCSeq(){
   for (var i = 1; i < clientsHW; i++) {
     if (!clients[i]) return i;
@@ -177,7 +168,11 @@ exports.serveClient = function serveClient(c, cid){
       getFreeOSlot(function(oSlotID, oSlot, oSock){
         oSock.write(Buffer.concat(req.buf));
         delete req.buf;
-        bindOSlot(req, cSeq, cSlotID, client.cTime, oSlotID);
+        oSlot.cType = C.NORADLE;
+        oSlot.cSeq = cSeq;
+        oSlot.cSlotID = cSlotID;
+        oSlot.cTime = client.cTime;
+        req.oSlotID = oSlotID;
         req.sendTime = Date.now();
         logDispatch('C2O: (%d,%d) found oSlot to send', cSlotID, oSlotID);
       });
