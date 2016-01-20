@@ -85,6 +85,7 @@ function Client(c, cSeq, cid){
 function bindOSlot(req, cSeq, cSlotID, cTime, oSlotID){
   req.oSlotID = oSlotID;
   var oraSlot = oraSessions[oSlotID];
+  oraSlot.cType = C.NORADLE;
   oraSlot.cSeq = cSeq;
   oraSlot.cSlotID = cSlotID;
   oraSlot.cTime = cTime;
@@ -375,55 +376,65 @@ exports.serveOracle = function serveOracle(c, headers){
   });
 
   frame.parseFrameStream(c, function processOracleFrame(head, cSlotID, type, flag, len, body){
+    (cSlotID ? handleOracleApplicationFrame : handleOracleManagementFrame)();
 
-    if (cSlotID === 0) {
+    function handleOracleManagementFrame(){
       // control frame from oracle
-      if (type === C.RO_QUIT) {
-        // oracle want to quit, if oSlot is free then quit, otherwise make oSlot is quitting, quit when release
-        oraSessions[oSlotID].quitting = true;
-        var index = freeOraSlotIDs.indexOf(oSlotID);
-        if (index >= 0) {
-          freeOraSlotIDs.splice(index, 1);
-          signalOracleQuit(c);
-        }
-      } else if (type === C.RES_CLI_CFG) {
-        gotClientConfig(body);
-        return;
-      } else {
-        logMan('unknown management frame %j', body.toString().split('\0'));
+      switch (type) {
+        case C.RO_QUIT:
+          // oracle want to quit, if oSlot is free then quit, otherwise make oSlot is quitting, quit when release
+          oraSessions[oSlotID].quitting = true;
+          var index = freeOraSlotIDs.indexOf(oSlotID);
+          if (index >= 0) {
+            freeOraSlotIDs.splice(index, 1);
+            signalOracleQuit(c);
+          }
+          return;
+        case C.RES_CLI_CFG:
+          gotClientConfig(body);
+          return;
+        default:
+          logMan('unknown management frame %j', body.toString().split('\0'));
       }
-    } else {
-      // redirect frame to the right client socket untouched
-      logDispatch('O2C: (%d,%d), cseq=%d, type=%d', cSlotID, oSlotID, oraSessions[oSlotID].cSeq, type);
-      var oraSession = oraSessions[oSlotID]
-        , client = clients[oraSession.cSeq]
-        ;
-      // client may be killed this time or a client with same cSeq connected
-      if (client && oraSession.cTime === client.cTime) {
-        var cliSock = client.socket;
-        cliSock.write(head);
-        body && cliSock.write(body);
+    }
 
-        var cStats = client.cfg.stats
-          , req = client.cSlots[cSlotID]
-          ;
-        cStats.outBytes += (8 + len);
-        if (type === C.HEAD_FRAME) {
-          cStats.respDelay += (Date.now() - req.sendTime);
-        }
-        if (type === C.END_FRAME) {
-          cStats.respCount++;
-          cStats.waitTime += (req.sendTime - req.rcvTime);
-          cStats.execTime += (Date.now() - req.sendTime);
-          delete client.cSlots[cSlotID];
-        }
-      } else {
-        // requesting client is gone
+    function handleOracleApplicationFrame(){
+      // redirect frame to the right client socket untouched
+      var oraSession = oraSessions[oSlotID];
+      logDispatch('O2%s: (%d,%d), type=%d', 'CHSF'[oraSession.cType], cSlotID, oSlotID, type);
+      switch (oraSession.cType) {
+        case C.NORADLE:
+          var client = clients[oraSession.cSeq];
+          // client may be killed this time or a client with same cSeq connected
+          if (client && oraSession.cTime === client.cTime) {
+            var cliSock = client.socket;
+            cliSock.write(head);
+            body && cliSock.write(body);
+
+            var cStats = client.cfg.stats
+              , req = client.cSlots[cSlotID]
+              ;
+            cStats.outBytes += (8 + len);
+            if (type === C.HEAD_FRAME) {
+              cStats.respDelay += (Date.now() - req.sendTime);
+            }
+            if (type === C.END_FRAME) {
+              cStats.respCount++;
+              cStats.waitTime += (req.sendTime - req.rcvTime);
+              cStats.execTime += (Date.now() - req.sendTime);
+              delete client.cSlots[cSlotID];
+            }
+          } else {
+            // requesting client is gone
+          }
+          if (type === C.END_FRAME) {
+            // reclaim oraSock for other use
+            logDispatch('O2C: (%d,%d) oSlot is freed', cSlotID, oSlotID);
+            unBindOSlot(oraSession);
+          }
+          break;
       }
       if (type === C.END_FRAME) {
-        // reclaim oraSock for other use
-        logDispatch('O2C: (%d,%d) oSlot is freed', cSlotID, oSlotID);
-        unBindOSlot(oraSession);
         if (oraSession.quitting) {
           signalOracleQuit(c);
         } else {
