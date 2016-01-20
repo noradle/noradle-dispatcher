@@ -159,7 +159,6 @@ exports.serveClient = function serveClient(c, cid){
     delete clients[cSeq];
   });
 
-
   frame.parseFrameStream(c, function processClientFrame(head, cSlotID, type, flag, len, body){
     logDispatch('C2O: cSlotID=%d type=%d len=%d', cSlotID, type, len);
     if (cSlotID === 0) {
@@ -203,7 +202,14 @@ exports.serveClient = function serveClient(c, cid){
       } else {
         // init buf, add to queue
         req.buf = [head0, body0, head, body];
-        queue.push([cSeq, cSlotID]);
+        queue.push(function(oSlotID, oSock){
+          logDispatch('unshift queue item cseq=%d, cSlotID=%d, req(chunks)=%d', cSeq, cSlotID, req.buf.length);
+          oSock.write(Buffer.concat(req.buf));
+          delete req.buf;
+          bindOSlot(req, cSeq, cSlotID, client.cTime, oSlotID);
+          req.sendTime = Date.now();
+          logDispatch('switch %j to use oSlot(%d)', w, oSlotID);
+        });
         logDispatch('C2O: (%d,_) head frame no free slot, push to queue', cSlotID);
       }
 
@@ -280,18 +286,6 @@ function afterNewAvailableOSlot(oSlotID, isNew){
       afterNewAvailableOSlot(oSlotID, isNew);
       return;
     }
-    var cSeq = w[0]
-      , cSlotID = w[1]
-      , client = clients[cSeq]
-      , req = client.cSlots[cSlotID]
-      , buf = req.buf
-      ;
-    logDispatch('unshift queue item cseq=%d, cSlotID=%d, req(chunks)=%d', cSeq, cSlotID, req.buf.length);
-    oraSessions[oSlotID].socket.write(Buffer.concat(buf));
-    delete req.buf;
-    bindOSlot(req, cSeq, cSlotID, client.cTime, oSlotID);
-    req.sendTime = Date.now();
-    logDispatch('switch %j to use oSlot(%d)', w, oSlotID);
   } else {
     concurrencyHW = oSlotCnt;
     if (isNew) {
