@@ -106,15 +106,6 @@ function parseNVArray(arr){
   return o;
 }
 
-function getClientConfig(client){
-  var arr = ['CLI_CFG', '', 'm$cid', client.cid, 'm$cseq', client.cSeq];
-  getFreeOSlot(function(oSlotID, oSock){
-    logMan('fetchClientConfig send %j', arr);
-    toOracle(oSock, arr);
-    afterNewAvailableOSlot(oSlotID, false);
-  });
-}
-
 function gotClientConfig(body){
   var cfg = parseNVArray(body.toString().split("\0"))
     , cSeq = parseInt(cfg.cseq)
@@ -140,7 +131,14 @@ exports.serveClient = function serveClient(c, cid){
   // send cid,cSeq to oracle, require cid's conncurrency quota
   // initial set to 0, donn't need to send it, client' initial freelist is []
   // when oracle return quota, call below to signal client he have this number of concurrency
-  getClientConfig(client);
+  (function getClientConfig(){
+    getFreeOSlot(function(oSlotID, oSock){
+      var arr = ['CLI_CFG', '', 'm$cid', client.cid, 'm$cseq', client.cSeq];
+      logMan('fetchClientConfig send %j', arr);
+      toOracle(oSock, arr);
+      afterNewAvailableOSlot(oSlotID, false);
+    });
+  })();
 
   c.on('end', function(){
     c.end();
