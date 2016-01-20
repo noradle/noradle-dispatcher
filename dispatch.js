@@ -91,12 +91,6 @@ function bindOSlot(req, cSeq, cSlotID, cTime, oSlotID){
   oraSlot.cTime = cTime;
 }
 
-function unBindOSlot(oSlot){
-  delete oSlot.cSeq;
-  delete oSlot.cSlotID;
-  delete oSlot.cTime;
-}
-
 function findMinFreeCSeq(){
   for (var i = 1; i < clientsHW; i++) {
     if (!clients[i]) return i;
@@ -431,7 +425,6 @@ exports.serveOracle = function serveOracle(c, headers){
           if (type === C.END_FRAME) {
             // reclaim oraSock for other use
             logDispatch('O2C: (%d,%d) oSlot is freed', cSlotID, oSlotID);
-            unBindOSlot(oraSession);
           }
           break;
       }
