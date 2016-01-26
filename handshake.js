@@ -185,6 +185,23 @@ exports.bindServer = bindServer;
 
   (function listenSCGI(){
     if (!global.args.listenHttp) return;
+
+  (function rawHTTP(){
+    if (!global.args.rawHttp) return;
+    var o = getOptions(global.args.rawHttp);
+    var server = require('net').createServer(function(c){
+      main.serveHTTP(c, 'HTTP:' + global.args.rawHttp);
+    });
+    if (o.host) {
+      server.listen(o.port, o.host, function(){
+        console.log('dispatcher is listening at %s for raw HTTP', global.args.rawHttp);
+      });
+    } else {
+      server.listen(o.port, function(){
+        console.log('dispatcher is listening at %s for raw HTTP', global.args.rawHttp);
+      });
+    }
+  })();
     var o = getOptions(global.args.rawScgi);
     var server = require('net').createServer(function(c){
       main.serveSCGI(c, 'scgi:' + global.args.rawScgi);

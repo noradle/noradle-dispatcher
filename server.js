@@ -9,6 +9,7 @@ program
   .option('-C --pem-prefix [path prefix of pem file]', 'SSL (C)ert prefix, {key: @-key.pem, cert: @-cert.pem} for https server')
   .option('-P --listen-path [filepath]', 'unix-domain-socket/windows-named-pipe path')
   .option('-s --raw-scgi [port:host]', 'SCGI listening address', 1531)
+  .option('-r --raw-http [port:host]', 'raw HTTP listening address', '1530')
   .option('-c, --client_config [file]', 'client control configuration file path')
   .option('-k, --keep_alive_interval [seconds]', 'keep_alive_interval', parseInt)
   .option('-a, --auth_checker_path [file(js function or json static config)]', 'authentication func or config')
