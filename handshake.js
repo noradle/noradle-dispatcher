@@ -217,6 +217,23 @@ exports.bindServer = bindServer;
     }
   })();
 
+  (function rawFCGI(){
+    if (!global.args.rawFcgi) return;
+    var o = getOptions(global.args.rawFcgi);
+    var server = require('net').createServer(function(c){
+      main.serveFCGI(c, 'FCGI:' + global.args.rawFcgi);
+    });
+    if (o.host) {
+      server.listen(o.port, o.host, function(){
+        console.log('dispatcher is listening at %s for raw FCGI', global.args.rawFcgi);
+      });
+    } else {
+      server.listen(o.port, function(){
+        console.log('dispatcher is listening at %s for raw FCGI', global.args.rawFcgi);
+      });
+    }
+  })();
+
 })();
 
 /**
