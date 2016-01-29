@@ -4,12 +4,13 @@ var program = require('commander');
 
 program
   .version(require('./package.json').version)
-  .option('-H --listen-http [port:host]', 'http listening address', 1522)
-  .option('-S --listen-https [port:host]', 'https listening address', 1523)
+  .option('-H --listen-http [port:host]', 'HTTP listening address', 1522)
+  .option('-S --listen-https [port:host]', 'HTTPS listening address', 1523)
   .option('-C --pem-prefix [path prefix of pem file]', 'SSL (C)ert prefix, {key: @-key.pem, cert: @-cert.pem} for https server')
   .option('-P --listen-path [filepath]', 'unix-domain-socket/windows-named-pipe path')
-  .option('-s --raw-scgi [port:host]', 'SCGI listening address', 1531)
   .option('-r --raw-http [port:host]', 'raw HTTP listening address', '1530')
+  .option('-s --raw-scgi [port:host]', 'raw SCGI listening address', '1531')
+  .option('-f --raw-fcgi [port:host]', 'raw FCGI listening address', '1532')
   .option('-c, --client_config [file]', 'client control configuration file path')
   .option('-k, --keep_alive_interval [seconds]', 'keep_alive_interval', parseInt)
   .option('-a, --auth_checker_path [file(js function or json static config)]', 'authentication func or config')
