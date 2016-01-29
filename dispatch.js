@@ -47,6 +47,7 @@ function Stats(){
 var net = require('net')
   , fs = require('fs')
   , frame = require('noradle-protocol').frame
+  , fcgi = require('noradle-protocol').fcgi
   , _ = require('underscore')
   , C = require('noradle-protocol').constant
   , queue = []
@@ -79,7 +80,7 @@ function Client(c, cSeq, cid){
   this.cSlots = new Array(C.CLI_MAX_SLOTS);
   var cfg = client_cfgs[cid];
   this.cur_concurrency = 0;
-  this.cfg = cfg;
+  this.cfg = cfg || {stats : new Stats()};
 }
 
 function findMinFreeCSeq(){
@@ -265,6 +266,83 @@ exports.serveSCGI = function serveSCGI(c, cid){
   });
 };
 
+var fcgiReqSeq = 0
+  , logFcgi = debug('dispatcher:FCGI')
+  ;
+exports.serveFCGI = function serveFCGI(c, cid){
+  var cSeq = findMinFreeCSeq()
+    , client = clients[cSeq] = new Client(c, cSeq, cid)
+    , cStats = client.cfg.stats
+    ;
+  logLifeCycle('FCGI(%d) connected');
+
+  c.on('end', function(){
+    c.end();
+    logLifeCycle('FCGI(%d) disconnected', cSeq);
+  });
+
+  c.on('error', function(err){
+    console.error('FCGI socket error', err, cSeq);
+    delete clients[cSeq];
+  });
+
+  c.on('close', function(has_error){
+    logLifeCycle('FCGI(%d) close', cSeq);
+    delete clients[cSeq];
+  });
+
+  fcgi.parseFrameStream(c, function processFCGIFrame(head, cSlotID, type, flag, len, body){
+    logDispatch('F2O: cSlotID=%d type=%d len=%d', cSlotID, type, len);
+    if (cSlotID === 0) {
+      // for management record
+      return;
+    }
+
+    // it's for normal request frame
+    var req, oSlotID, oSock;
+
+    if (type === fcgi.BEGIN) {
+      var body0 = new Buffer(['FCGI', client.cid, cSlotID].join(','))
+        , head0 = frame.makeFrameHead(cSlotID, C.PRE_HEAD, 0, body0.length)
+        ;
+      cStats.reqCount++;
+      req = client.cSlots[cSlotID] = {
+        rcvTime : Date.now(),
+        buf : [head0, body0, head, body]
+      };
+      getFreeOSlot(function(oSlotID, oSlot, oSock){
+        oSock.write(Buffer.concat(req.buf));
+        delete req.buf;
+        oSlot.cType = C.FCGI;
+        oSlot.cSeq = cSeq;
+        oSlot.cSlotID = cSlotID;
+        oSlot.cTime = client.cTime;
+        req.oSlotID = oSlotID;
+        req.sendTime = Date.now();
+        logDispatch('F2O: (%d,%d) found oSlot to send', cSlotID, oSlotID);
+      });
+    } else {
+      if (len > 32767) {
+        // todo: if bLen is greater than oracle UTL_TCP buffer size, split it
+      }
+      req = client.cSlots[cSlotID];
+      // for the successive frames of a request
+      oSlotID = req.oSlotID;
+      if (oSlotID) {
+        logDispatch('F2O: (%d,%d) successive frame use bound oSlodID(%d)', cSlotID, oSlotID);
+        oSock = oraSessions[oSlotID].socket;
+        oSock.write(head);
+        body && oSock.write(body);
+      } else {
+        logDispatch('F2O: cSlodID(%d,_) successive frame add to buf(chunks=%d)', cSlotID, req.buf.length);
+        req.buf.push(head);
+        body && req.buf.push(body);
+      }
+    }
+  });
+
+};
+
 function Session(headers, socket){
 
   oSlotCnt++;
@@ -446,7 +524,7 @@ exports.serveOracle = function serveOracle(c, headers){
 
       // release oSlot early, reclaim oraSock for other use
       if (type === C.END_FRAME) {
-        logDispatch('O2C: (%d,%d) oSlot is freed', cSlotID, oSlotID);
+        logDispatch('O2%s: (%d,%d) oSlot is freed', 'CHSF'[oraSession.cType], cSlotID, oSlotID);
         if (oraSession.quitting) {
           signalOracleQuit(c);
         } else {
@@ -498,6 +576,48 @@ exports.serveOracle = function serveOracle(c, headers){
             body && cliSock.write(body);
             if (type === C.END_FRAME) {
               cliSock.end();
+            }
+          })();
+        case C.FCGI:
+          return (function gotRespFCGI(){
+            // redirect frame to the right client socket untouched
+            var client = clients[oraSession.cSeq];
+            // client may be killed this time or a client with same cSeq connected
+            if (client && oraSession.cTime !== client.cTime) {
+              // requesting client is gone
+              return;
+            }
+            var cliSock = client.socket
+              , cStats = client.cfg.stats
+              , req = client.cSlots[cSlotID]
+              , pLen = flag
+              , cLen = len - pLen
+              ;
+            cStats.outBytes += (8 + len);
+            switch (type) {
+              case C.HEAD_FRAME:
+                fcgi.makeFrameHead(head, fcgi.STDOUT, cSlotID, cLen, pLen);
+                cliSock.write(head);
+                cliSock.write(body);
+                break;
+              case C.BODY_FRAME:
+                fcgi.makeFrameHead(head, fcgi.STDOUT, cSlotID, cLen, pLen);
+                cliSock.write(head);
+                cliSock.write(body);
+                break;
+              case C.END_FRAME:
+                // send FCGI end frame
+                // todo: nginx always return 200 status, it's wrong
+                fcgi.makeFrameHead(head, fcgi.STDOUT, cSlotID, 0, 0);
+                cliSock.write(head);
+                fcgi.makeFrameHead(head, fcgi.END, cSlotID, 8, 0);
+                cliSock.write(head);
+                cliSock.write(body);
+                cStats.respCount++;
+                cStats.waitTime += (req.sendTime - req.rcvTime);
+                cStats.execTime += (Date.now() - req.sendTime);
+                delete client.cSlots[cSlotID];
+                break;
             }
           })();
       }
