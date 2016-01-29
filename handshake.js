@@ -183,9 +183,6 @@ exports.bindServer = bindServer;
     }
   })();
 
-  (function listenSCGI(){
-    if (!global.args.listenHttp) return;
-
   (function rawHTTP(){
     if (!global.args.rawHttp) return;
     var o = getOptions(global.args.rawHttp);
@@ -202,17 +199,20 @@ exports.bindServer = bindServer;
       });
     }
   })();
+
+  (function rawSCGI(){
+    if (!global.args.rawScgi) return;
     var o = getOptions(global.args.rawScgi);
     var server = require('net').createServer(function(c){
-      main.serveSCGI(c, 'scgi:' + global.args.rawScgi);
+      main.serveSCGI(c, 'SCGI:' + global.args.rawScgi);
     });
     if (o.host) {
       server.listen(o.port, o.host, function(){
-        console.log('dispatcher is listening at %s for SCGI', global.args.rawScgi);
+        console.log('dispatcher is listening at %s for raw SCGI', global.args.rawScgi);
       });
     } else {
       server.listen(o.port, function(){
-        console.log('dispatcher is listening at %s for SCGI', global.args.rawScgi);
+        console.log('dispatcher is listening at %s for raw SCGI', global.args.rawScgi);
       });
     }
   })();
