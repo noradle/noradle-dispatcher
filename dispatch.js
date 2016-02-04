@@ -200,6 +200,7 @@ var httpReqSeq = 0
 exports.serveHTTP = function serveHTTP(c, cid){
   var cSeq = ++httpReqSeq
     , cSlotID = cSeq
+    , oSock_
     ;
   logLifeCycle('HTTP(%d) connected');
 
@@ -218,7 +219,18 @@ exports.serveHTTP = function serveHTTP(c, cid){
     delete clients[cSeq];
   });
 
+  c.setTimeout(15 * 1000, function(){
+    logLifeCycle('HTTP(%d) timeout', cSeq);
+    c.end();
+    oSock_ && oSock_.end();
+  });
+
   getFreeOSlot(function sendStream(oSlotID, oSlot, oSock){
+    if (!c.readable || !c.writable) {
+      // giveup and recycle oSlot
+      return afterNewAvailableOSlot(oSlotID);
+    }
+    oSock_ = oSock;
     oSlot.cType = C.HTTP;
     oSlot.cliSock = c;
     var body0 = new Buffer(['HTTP', cid, cSlotID].join(','))
