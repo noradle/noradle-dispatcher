@@ -226,7 +226,8 @@ exports.serveHTTP = function serveHTTP(c, cid){
       ;
     oSock.write(head0);
     oSock.write(body0);
-    c.pipe(oSock, {end : false});
+    c.pipe(oSock, {end : true}).pipe(c, {end : true});
+    oSock.removeAllListeners('readable');
   });
 };
 
@@ -562,12 +563,7 @@ exports.serveOracle = function serveOracle(c, headers){
           })();
         case C.HTTP:
           return (function gotRespHTTP(){
-            var cliSock = oraSession.cliSock;
-            //cliSock.write(head);
-            body && cliSock.write(body);
-            if (type === C.END_FRAME) {
-              cliSock.end();
-            }
+            console.error('never should occured here');
           })();
         case C.SCGI:
           return (function gotRespSCGI(){
