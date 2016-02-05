@@ -230,10 +230,19 @@ exports.serveHTTP = function serveHTTP(c, cid){
       // giveup and recycle oSlot
       return afterNewAvailableOSlot(oSlotID);
     }
+    var sa = c.address();
+    var preHead = [
+      'HTTP', cid, cSlotID, '',
+      'a$sfami', sa.family,
+      'a$saddr', sa.address,
+      'a$sport', sa.port.toString(),
+      'a$caddr', c.remoteAddress,
+      'a$cport', c.remotePort.toString()
+    ];
     oSock_ = oSock;
     oSlot.cType = C.HTTP;
     oSlot.cliSock = c;
-    var body0 = new Buffer(['HTTP', cid, cSlotID].join(','))
+    var body0 = new Buffer(preHead.join(','))
       , head0 = frame.makeFrameHead(cSlotID, C.PRE_HEAD, 0, body0.length)
       ;
     oSock.write(head0);
