@@ -112,7 +112,7 @@ exports.serveClient = function serveClient(c, cid){
   // when oracle return quota, call below to signal client he have this number of concurrency
   (function getClientConfig(){
     getFreeOSlot(function(oSlotID, oSlot, oSock){
-      var arr = ['CLI_CFG', '', 'm$cid', client.cid, 'm$cseq', client.cSeq];
+      var arr = ['b$mgmtype', 'CLI_CFG', 'b$cid', client.cid, 'b$cseq', client.cSeq];
       logMan('fetchClientConfig send %j', arr);
       toOracle(oSock, arr);
       afterNewAvailableOSlot(oSlotID, false);
@@ -444,15 +444,15 @@ function toOracle(c, arr){
 
 function signalAskOSP(c, queue){
   concurrencyHW = queue.length + oSlotCnt;
-  toOracle(c, ['ASK_OSP', '', 'queue_len', queue.length, 'oslot_cnt', oSlotCnt]);
+  toOracle(c, ['b$mgmtype', 'ASK_OSP', 'queue_len', queue.length, 'oslot_cnt', oSlotCnt]);
 }
 
 function signalOracleQuit(c){
-  toOracle(c, ['QUIT', '']);
+  toOracle(c, ['b$mgmtype', 'QUIT']);
 }
 
 function signalOracleKeepAlive(c){
-  toOracle(c, ['KEEPALIVE', '', 'keepAliveInterval', keepAliveInterval]);
+  toOracle(c, ['b$mgmtype', 'KEEPALIVE', 'keepAliveInterval', keepAliveInterval]);
 }
 
 // for oracle reverse connection
