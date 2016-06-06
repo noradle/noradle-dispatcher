@@ -56,9 +56,9 @@ global.startCfg = {
   if (cfg.auth_checker_path) {
     switch (cfg.auth_checker_path[0]) {
       case '/' :
-        authModule = require(cfg.auth_checker_path);
+        authModule = require(cfg.auth_checker_path);break;
       case '.':
-        authModule = require(cfg.auth_checker_path);
+        authModule = require(cfg.auth_checker_path);break;
       default:
         authModule = require(require('path').join('./', cfg.auth_checker_path));
     }
