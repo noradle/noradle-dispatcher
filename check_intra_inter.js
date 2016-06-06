@@ -21,7 +21,7 @@ module.exports = function(cfg){
       return false;
     }
     try {
-      var cip = authAttr.cip
+      var cip = authAttr.cip.split(':').pop()
         , d4 = cip.split('.')
         ;
       console.log(d4);
