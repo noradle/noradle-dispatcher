@@ -116,7 +116,7 @@ function bindServer(server){
     .on('request', serveConsole)
     .on('upgrade', serveClientOracle)
     .on('connection', function(c){
-      console.log('new connection to dispatcher(%s:%d)', c.localAddress, c.localPort);
+      console.log('new connection to dispatcher from (%s:%d)', c.remoteAddress, c.remotePort);
     });
 }
 exports.bindServer = bindServer;
