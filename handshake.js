@@ -73,7 +73,8 @@ function serveClientOracle(req, cltSocket, head){
     return;
   }
 
-  if (global.authChecker(authAttr)) {
+  var reason;
+  if (reason = global.authChecker(authAttr)) {
     logUpgrade('%s authorization failed check, %s', authAttr.role, reason);
     cltSocket.end('HTTP/1.1 401 Forbidden\r\n' +
       'WWW-Authenticate: Basic realm="NORADLE"\r\n' +

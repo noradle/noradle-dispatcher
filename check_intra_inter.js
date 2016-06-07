@@ -13,7 +13,8 @@ module.exports = function(cfg){
    * 192.168.0.0/16： 192.168.0.0～192.168.255.255
    * @param authAttr (role, name, pass, cip, secure)
    * by now cfg is not used yet
-   * @returns {boolean}
+   * @returns {boolean} false for pass
+   * @returns {string} fail pass reason
    */
   return function check_intra_inter(authAttr){
     console.log(__filename, '\n', authAttr);
