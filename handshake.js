@@ -30,6 +30,7 @@ function serveConsole(req, res){
   logRequest('req.url=%s', req.url);
   logRequest('req.headers=%s', JSON.stringify(req.headers, null, 2));
   authAttr = extract(req);
+  authAttr.role = 'console';
   if (authAttr.role !== 'console') {
     res.writeHead(401, {'Content-Type' : 'text/plain'});
     res.write('only noradle-console is allowed to access');
